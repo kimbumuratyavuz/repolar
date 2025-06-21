@@ -1,0 +1,1017 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M3U Düzenleyici</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .channel-logo-preview {
+            width: 80px;
+            height: 80px;
+            object-fit: contain;
+            background-color: #f3f4f6;
+            border-radius: 0.5rem;
+        }
+        .dragging {
+            opacity: 0.5;
+            border: 2px dashed #3b82f6;
+        }
+        .channel-item {
+            transition: all 0.2s ease;
+        }
+        .channel-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+        #dropZone {
+            border: 2px dashed #9ca3af;
+            transition: all 0.3s ease;
+        }
+        #dropZone.drag-over {
+            border-color: #3b82f6;
+            background-color: #f0f9ff;
+        }
+        .channel-logo {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+            background-color: #f3f4f6;
+            border-radius: 0.25rem;
+        }
+        .empty-logo {
+            width: 48px;
+            height: 48px;
+            background-color: #e5e7eb;
+            border-radius: 0.25rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9ca3af;
+        }
+        .category-item {
+            transition: all 0.2s ease;
+        }
+        .category-item:hover {
+            background-color: #f3f4f6;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-8">
+            <div>
+                <h1 class="text-3xl font-bold text-blue-600">M3U Düzenleyici</h1>
+                <p class="text-gray-600">IPTV çalma listelerinizi kolayca oluşturun ve yönetin</p>
+            </div>
+            <div class="flex space-x-4">
+                <button id="newListBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-plus mr-2"></i> Yeni Liste
+                </button>
+                <button id="importListBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                    <i class="fas fa-file-import mr-2"></i> İçe Aktar
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+            <!-- Sidebar -->
+            <div class="lg:col-span-1 bg-white rounded-lg shadow p-4">
+                <h2 class="text-xl font-semibold mb-4 text-gray-800">Çalma Listeleriniz</h2>
+                <ul id="playlistList" class="space-y-2">
+                    <!-- Playlists will be added here dynamically -->
+                    <li class="text-gray-500 italic">Henüz liste yok</li>
+                </ul>
+
+                <div class="mt-6">
+                    <h2 class="text-xl font-semibold mb-4 text-gray-800">Kategoriler</h2>
+                    <div class="flex mb-4">
+                        <input type="text" id="newCategoryInput" placeholder="Yeni kategori" class="flex-1 border border-gray-300 rounded-l-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <button id="addCategoryBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-r-lg">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                    <ul id="categoryList" class="space-y-2">
+                        <!-- Categories will be added here dynamically -->
+                        <li class="text-gray-500 italic">Henüz kategori yok</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Main Editor Area -->
+            <div class="lg:col-span-3 space-y-6">
+                <!-- Current Playlist Info -->
+                <div id="currentPlaylistInfo" class="bg-white rounded-lg shadow p-4 hidden">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 id="currentPlaylistName" class="text-xl font-semibold text-gray-800">Liste Adı</h2>
+                        <div class="flex space-x-2">
+                            <button id="saveListBtn" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center">
+                                <i class="fas fa-save mr-2"></i> M3U Kaydet
+                            </button>
+                            <button id="clearListBtn" class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg flex items-center">
+                                <i class="fas fa-trash mr-2"></i> Temizle
+                            </button>
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center mb-4">
+                        <div>
+                            <span id="channelCount" class="text-gray-600">0 kanal</span>
+                        </div>
+                        <button id="addChannelBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-plus mr-2"></i> Kanal Ekle
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Channel List -->
+                <div id="channelListContainer" class="hidden">
+                    <div id="dropZone" class="bg-white rounded-lg shadow p-4">
+                        <div id="channelList" class="space-y-3">
+                            <!-- Channels will be added here dynamically -->
+                            <div class="text-center py-10 text-gray-500">
+                                <i class="fas fa-tv text-4xl mb-2"></i>
+                                <p>Henüz kanal eklenmedi</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Import Dropzone -->
+                <div id="importDropzone" class="bg-white rounded-lg shadow p-8 text-center">
+                    <i class="fas fa-file-import text-5xl text-blue-500 mb-4"></i>
+                    <h3 class="text-xl font-semibold mb-2">M3U Listesi İçe Aktar</h3>
+                    <p class="text-gray-600 mb-4">M3U dosyanızı buraya sürükleyip bırakın veya gözat'a tıklayın</p>
+                    <input type="file" id="fileInput" class="hidden" accept=".m3u,.m3u8">
+                    <button id="browseFilesBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg">
+                        Gözat
+                    </button>
+                </div>
+
+                <!-- Empty State -->
+                <div id="emptyState" class="bg-white rounded-lg shadow p-8 text-center">
+                    <i class="fas fa-tv text-5xl text-blue-500 mb-4"></i>
+                    <h3 class="text-xl font-semibold mb-2">Liste Oluşturun veya İçe Aktarın</h3>
+                    <p class="text-gray-600 mb-4">Yeni bir liste oluşturarak veya M3U dosyası içe aktararak başlayın</p>
+                    <div class="flex justify-center space-x-4">
+                        <button id="newListBtn2" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-plus mr-2"></i> Yeni Liste
+                        </button>
+                        <button id="importListBtn2" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg flex items-center">
+                            <i class="fas fa-file-import mr-2"></i> İçe Aktar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Playlist Modal -->
+    <div id="newPlaylistModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold">Yeni Liste Oluştur</h3>
+                <button id="closeNewPlaylistModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mb-4">
+                <label for="playlistNameInput" class="block text-gray-700 mb-2">Liste Adı</label>
+                <input type="text" id="playlistNameInput" placeholder="Listem" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button id="cancelNewPlaylistBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100">İptal</button>
+                <button id="createPlaylistBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Oluştur</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Channel Modal -->
+    <div id="channelModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
+            <div class="flex justify-between items-center mb-4">
+                <h3 id="channelModalTitle" class="text-xl font-semibold">Kanal Ekle</h3>
+                <button id="closeChannelModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <label for="channelNameInput" class="block text-gray-700 mb-1">Kanal Adı</label>
+                    <input type="text" id="channelNameInput" placeholder="Kanal adı" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="channelUrlInput" class="block text-gray-700 mb-1">Yayın URL'si</label>
+                    <input type="text" id="channelUrlInput" placeholder="http://ornek.com/yayin.m3u8" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                </div>
+                <div>
+                    <label for="channelLogoInput" class="block text-gray-700 mb-1">Logo URL'si</label>
+                    <input type="text" id="channelLogoInput" placeholder="http://ornek.com/logo.png" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <div class="mt-2 flex items-center">
+                        <img id="channelLogoPreview" src="" alt="Logo Önizleme" class="channel-logo-preview mr-3 hidden">
+                        <button id="uploadLogoBtn" class="text-blue-600 hover:text-blue-800 text-sm flex items-center">
+                            <i class="fas fa-upload mr-1"></i> Logo Yükle
+                        </button>
+                        <input type="file" id="logoFileInput" class="hidden" accept="image/*">
+                    </div>
+                </div>
+                <div>
+                    <label for="channelCategorySelect" class="block text-gray-700 mb-1">Kategori</label>
+                    <div class="flex">
+                        <select id="channelCategorySelect" class="flex-1 border border-gray-300 rounded-l-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Kategori seçin</option>
+                        </select>
+                        <button id="newCategoryFromModalBtn" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-3 py-2 rounded-r-lg">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="flex justify-end space-x-3 pt-4">
+                    <button id="cancelChannelBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100">İptal</button>
+                    <button id="saveChannelBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Kaydet</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- New Category Modal -->
+    <div id="newCategoryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold">Yeni Kategori Ekle</h3>
+                <button id="closeNewCategoryModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mb-4">
+                <label for="newCategoryModalInput" class="block text-gray-700 mb-2">Kategori Adı</label>
+                <input type="text" id="newCategoryModalInput" placeholder="Kategori adı girin" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button id="cancelNewCategoryBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100">İptal</button>
+                <button id="confirmNewCategoryBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Ekle</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Category Modal -->
+    <div id="editCategoryModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-lg shadow-xl p-6 w-full max-w-sm">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-xl font-semibold">Kategoriyi Düzenle</h3>
+                <button id="closeEditCategoryModal" class="text-gray-500 hover:text-gray-700">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="mb-4">
+                <label for="editCategoryModalInput" class="block text-gray-700 mb-2">Kategori Adı</label>
+                <input type="text" id="editCategoryModalInput" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <input type="hidden" id="editCategoryModalOriginal">
+            </div>
+            <div class="flex justify-end space-x-3">
+                <button id="cancelEditCategoryBtn" class="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-100">İptal</button>
+                <button id="confirmEditCategoryBtn" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // App State
+        const state = {
+            playlists: [],
+            currentPlaylist: null,
+            categories: [],
+            editingChannelIndex: null,
+            editingCategory: null
+        };
+
+        // DOM Elements
+        const elements = {
+            // Buttons
+            newListBtn: document.getElementById('newListBtn'),
+            newListBtn2: document.getElementById('newListBtn2'),
+            importListBtn: document.getElementById('importListBtn'),
+            importListBtn2: document.getElementById('importListBtn2'),
+            saveListBtn: document.getElementById('saveListBtn'),
+            clearListBtn: document.getElementById('clearListBtn'),
+            addChannelBtn: document.getElementById('addChannelBtn'),
+            addCategoryBtn: document.getElementById('addCategoryBtn'),
+            uploadLogoBtn: document.getElementById('uploadLogoBtn'),
+            browseFilesBtn: document.getElementById('browseFilesBtn'),
+            
+            // Modals
+            newPlaylistModal: document.getElementById('newPlaylistModal'),
+            channelModal: document.getElementById('channelModal'),
+            newCategoryModal: document.getElementById('newCategoryModal'),
+            editCategoryModal: document.getElementById('editCategoryModal'),
+            
+            // Modal buttons
+            closeNewPlaylistModal: document.getElementById('closeNewPlaylistModal'),
+            cancelNewPlaylistBtn: document.getElementById('cancelNewPlaylistBtn'),
+            createPlaylistBtn: document.getElementById('createPlaylistBtn'),
+            closeChannelModal: document.getElementById('closeChannelModal'),
+            cancelChannelBtn: document.getElementById('cancelChannelBtn'),
+            saveChannelBtn: document.getElementById('saveChannelBtn'),
+            closeNewCategoryModal: document.getElementById('closeNewCategoryModal'),
+            cancelNewCategoryBtn: document.getElementById('cancelNewCategoryBtn'),
+            confirmNewCategoryBtn: document.getElementById('confirmNewCategoryBtn'),
+            newCategoryFromModalBtn: document.getElementById('newCategoryFromModalBtn'),
+            closeEditCategoryModal: document.getElementById('closeEditCategoryModal'),
+            cancelEditCategoryBtn: document.getElementById('cancelEditCategoryBtn'),
+            confirmEditCategoryBtn: document.getElementById('confirmEditCategoryBtn'),
+            
+            // Inputs
+            playlistNameInput: document.getElementById('playlistNameInput'),
+            channelNameInput: document.getElementById('channelNameInput'),
+            channelUrlInput: document.getElementById('channelUrlInput'),
+            channelLogoInput: document.getElementById('channelLogoInput'),
+            newCategoryInput: document.getElementById('newCategoryInput'),
+            newCategoryModalInput: document.getElementById('newCategoryModalInput'),
+            editCategoryModalInput: document.getElementById('editCategoryModalInput'),
+            editCategoryModalOriginal: document.getElementById('editCategoryModalOriginal'),
+            channelCategorySelect: document.getElementById('channelCategorySelect'),
+            fileInput: document.getElementById('fileInput'),
+            logoFileInput: document.getElementById('logoFileInput'),
+            
+            // Lists
+            playlistList: document.getElementById('playlistList'),
+            categoryList: document.getElementById('categoryList'),
+            channelList: document.getElementById('channelList'),
+            
+            // Info displays
+            currentPlaylistName: document.getElementById('currentPlaylistName'),
+            channelCount: document.getElementById('channelCount'),
+            channelModalTitle: document.getElementById('channelModalTitle'),
+            channelLogoPreview: document.getElementById('channelLogoPreview'),
+            
+            // Containers
+            currentPlaylistInfo: document.getElementById('currentPlaylistInfo'),
+            channelListContainer: document.getElementById('channelListContainer'),
+            importDropzone: document.getElementById('importDropzone'),
+            emptyState: document.getElementById('emptyState'),
+            dropZone: document.getElementById('dropZone')
+        };
+
+        // Event Listeners
+        function setupEventListeners() {
+            // New playlist buttons
+            elements.newListBtn.addEventListener('click', showNewPlaylistModal);
+            elements.newListBtn2.addEventListener('click', showNewPlaylistModal);
+            
+            // Import buttons
+            elements.importListBtn.addEventListener('click', () => elements.fileInput.click());
+            elements.importListBtn2.addEventListener('click', () => elements.fileInput.click());
+            elements.browseFilesBtn.addEventListener('click', () => elements.fileInput.click());
+            
+            // File input
+            elements.fileInput.addEventListener('change', handleFileImport);
+            elements.logoFileInput.addEventListener('change', handleLogoUpload);
+            
+            // New playlist modal
+            elements.closeNewPlaylistModal.addEventListener('click', hideNewPlaylistModal);
+            elements.cancelNewPlaylistBtn.addEventListener('click', hideNewPlaylistModal);
+            elements.createPlaylistBtn.addEventListener('click', createNewPlaylist);
+            
+            // Channel modal
+            elements.closeChannelModal.addEventListener('click', hideChannelModal);
+            elements.cancelChannelBtn.addEventListener('click', hideChannelModal);
+            elements.saveChannelBtn.addEventListener('click', saveChannel);
+            elements.uploadLogoBtn.addEventListener('click', () => elements.logoFileInput.click());
+            elements.newCategoryFromModalBtn.addEventListener('click', showNewCategoryModalFromChannel);
+            
+            // Category modal
+            elements.closeNewCategoryModal.addEventListener('click', hideNewCategoryModal);
+            elements.cancelNewCategoryBtn.addEventListener('click', hideNewCategoryModal);
+            elements.confirmNewCategoryBtn.addEventListener('click', addNewCategoryFromModal);
+            
+            // Edit category modal
+            elements.closeEditCategoryModal.addEventListener('click', hideEditCategoryModal);
+            elements.cancelEditCategoryBtn.addEventListener('click', hideEditCategoryModal);
+            elements.confirmEditCategoryBtn.addEventListener('click', saveEditedCategory);
+            
+            // Add category button
+            elements.addCategoryBtn.addEventListener('click', addNewCategory);
+            
+            // Add channel button
+            elements.addChannelBtn.addEventListener('click', () => showChannelModal());
+            
+            // Save and clear playlist buttons
+            elements.saveListBtn.addEventListener('click', saveM3UFile);
+            elements.clearListBtn.addEventListener('click', clearCurrentPlaylist);
+            
+            // Drag and drop events
+            elements.dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                elements.dropZone.classList.add('drag-over');
+            });
+            
+            elements.dropZone.addEventListener('dragleave', () => {
+                elements.dropZone.classList.remove('drag-over');
+            });
+            
+            elements.dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                elements.dropZone.classList.remove('drag-over');
+                if (e.dataTransfer.files.length) {
+                    elements.fileInput.files = e.dataTransfer.files;
+                    handleFileImport();
+                }
+            });
+            
+            // Channel logo URL input
+            elements.channelLogoInput.addEventListener('input', updateLogoPreview);
+        }
+
+        // UI Functions
+        function showNewPlaylistModal() {
+            elements.playlistNameInput.value = '';
+            elements.newPlaylistModal.classList.remove('hidden');
+        }
+
+        function hideNewPlaylistModal() {
+            elements.newPlaylistModal.classList.add('hidden');
+        }
+
+        function showChannelModal(channelIndex = null) {
+            elements.channelModalTitle.textContent = channelIndex === null ? 'Kanal Ekle' : 'Kanalı Düzenle';
+            state.editingChannelIndex = channelIndex;
+            
+            if (channelIndex !== null && state.currentPlaylist) {
+                const channel = state.currentPlaylist.channels[channelIndex];
+                elements.channelNameInput.value = channel.name;
+                elements.channelUrlInput.value = channel.url;
+                elements.channelLogoInput.value = channel.logo || '';
+                elements.channelCategorySelect.value = channel.category || '';
+                
+                if (channel.logo) {
+                    elements.channelLogoPreview.src = channel.logo;
+                    elements.channelLogoPreview.classList.remove('hidden');
+                } else {
+                    elements.channelLogoPreview.classList.add('hidden');
+                }
+            } else {
+                elements.channelNameInput.value = '';
+                elements.channelUrlInput.value = '';
+                elements.channelLogoInput.value = '';
+                elements.channelCategorySelect.value = '';
+                elements.channelLogoPreview.classList.add('hidden');
+            }
+            
+            elements.channelModal.classList.remove('hidden');
+        }
+
+        function hideChannelModal() {
+            elements.channelModal.classList.add('hidden');
+        }
+
+        function showNewCategoryModalFromChannel() {
+            elements.newCategoryModalInput.value = '';
+            elements.newCategoryModal.classList.remove('hidden');
+        }
+
+        function hideNewCategoryModal() {
+            elements.newCategoryModal.classList.add('hidden');
+        }
+
+        function showEditCategoryModal(categoryName) {
+            elements.editCategoryModalInput.value = categoryName;
+            elements.editCategoryModalOriginal.value = categoryName;
+            elements.editCategoryModal.classList.remove('hidden');
+        }
+
+        function hideEditCategoryModal() {
+            elements.editCategoryModal.classList.add('hidden');
+        }
+
+        function updateLogoPreview() {
+            const logoUrl = elements.channelLogoInput.value;
+            if (logoUrl) {
+                elements.channelLogoPreview.src = logoUrl;
+                elements.channelLogoPreview.classList.remove('hidden');
+            } else {
+                elements.channelLogoPreview.classList.add('hidden');
+            }
+        }
+
+        function toggleMainUI(showEditor) {
+            if (showEditor) {
+                elements.emptyState.classList.add('hidden');
+                elements.importDropzone.classList.add('hidden');
+                elements.currentPlaylistInfo.classList.remove('hidden');
+                elements.channelListContainer.classList.remove('hidden');
+            } else {
+                elements.emptyState.classList.remove('hidden');
+                elements.importDropzone.classList.remove('hidden');
+                elements.currentPlaylistInfo.classList.add('hidden');
+                elements.channelListContainer.classList.add('hidden');
+            }
+        }
+
+        // Data Functions
+        function createNewPlaylist() {
+            const name = elements.playlistNameInput.value.trim();
+            if (!name) return;
+            
+            const newPlaylist = {
+                id: Date.now().toString(),
+                name,
+                channels: [],
+                createdAt: new Date().toISOString()
+            };
+            
+            state.playlists.push(newPlaylist);
+            state.currentPlaylist = newPlaylist;
+            
+            renderPlaylistList();
+            renderChannelList();
+            updatePlaylistInfo();
+            hideNewPlaylistModal();
+            toggleMainUI(true);
+        }
+
+        function setCurrentPlaylist(playlistId) {
+            const playlist = state.playlists.find(p => p.id === playlistId);
+            if (playlist) {
+                state.currentPlaylist = playlist;
+                renderChannelList();
+                updatePlaylistInfo();
+                toggleMainUI(true);
+            }
+        }
+
+        function clearCurrentPlaylist() {
+            if (state.currentPlaylist && confirm('Bu listeyi temizlemek istediğinizden emin misiniz? Tüm kanallar silinecek.')) {
+                state.currentPlaylist.channels = [];
+                renderChannelList();
+                updatePlaylistInfo();
+            }
+        }
+
+        function saveChannel() {
+            const name = elements.channelNameInput.value.trim();
+            const url = elements.channelUrlInput.value.trim();
+            const logo = elements.channelLogoInput.value.trim();
+            const category = elements.channelCategorySelect.value;
+            
+            if (!name || !url) return;
+            
+            const channel = { name, url, logo, category };
+            
+            if (state.editingChannelIndex !== null) {
+                // Update existing channel
+                state.currentPlaylist.channels[state.editingChannelIndex] = channel;
+            } else {
+                // Add new channel
+                state.currentPlaylist.channels.push(channel);
+            }
+            
+            renderChannelList();
+            updatePlaylistInfo();
+            hideChannelModal();
+        }
+
+        function addNewCategory() {
+            const name = elements.newCategoryInput.value.trim();
+            if (!name) return;
+            
+            if (!state.categories.includes(name)) {
+                state.categories.push(name);
+                renderCategoryList();
+                renderCategorySelect();
+                elements.newCategoryInput.value = '';
+            }
+        }
+
+        function addNewCategoryFromModal() {
+            const name = elements.newCategoryModalInput.value.trim();
+            if (!name) return;
+            
+            if (!state.categories.includes(name)) {
+                state.categories.push(name);
+                renderCategoryList();
+                renderCategorySelect();
+                elements.newCategoryModalInput.value = '';
+                elements.channelCategorySelect.value = name;
+                hideNewCategoryModal();
+            }
+        }
+
+        function saveEditedCategory() {
+            const oldName = elements.editCategoryModalOriginal.value;
+            const newName = elements.editCategoryModalInput.value.trim();
+            
+            if (!newName || newName === oldName) {
+                hideEditCategoryModal();
+                return;
+            }
+            
+            // Update category in categories list
+            const index = state.categories.indexOf(oldName);
+            if (index !== -1) {
+                state.categories[index] = newName;
+            }
+            
+            // Update category in all channels
+            state.playlists.forEach(playlist => {
+                playlist.channels.forEach(channel => {
+                    if (channel.category === oldName) {
+                        channel.category = newName;
+                    }
+                });
+            });
+            
+            renderCategoryList();
+            renderCategorySelect();
+            if (state.currentPlaylist) {
+                renderChannelList();
+            }
+            hideEditCategoryModal();
+        }
+
+        function deleteCategory(categoryName) {
+            if (confirm(`"${categoryName}" kategorisini silmek istediğinizden emin misiniz? Bu kategoriye ait kanalların kategorisi kaldırılacak.`)) {
+                // Remove category from list
+                state.categories = state.categories.filter(cat => cat !== categoryName);
+                
+                // Remove category from all channels
+                state.playlists.forEach(playlist => {
+                    playlist.channels.forEach(channel => {
+                        if (channel.category === categoryName) {
+                            channel.category = '';
+                        }
+                    });
+                });
+                
+                renderCategoryList();
+                renderCategorySelect();
+                if (state.currentPlaylist) {
+                    renderChannelList();
+                }
+            }
+        }
+
+        function deleteChannel(index) {
+            if (confirm('Bu kanalı silmek istediğinizden emin misiniz?')) {
+                state.currentPlaylist.channels.splice(index, 1);
+                renderChannelList();
+                updatePlaylistInfo();
+            }
+        }
+
+        function editChannel(index) {
+            showChannelModal(index);
+        }
+
+        // Rendering Functions
+        function renderPlaylistList() {
+            elements.playlistList.innerHTML = '';
+            
+            if (state.playlists.length === 0) {
+                elements.playlistList.innerHTML = '<li class="text-gray-500 italic">Henüz liste yok</li>';
+                return;
+            }
+            
+            state.playlists.forEach(playlist => {
+                const li = document.createElement('li');
+                li.className = `flex justify-between items-center p-2 rounded-lg cursor-pointer ${state.currentPlaylist?.id === playlist.id ? 'bg-blue-100' : 'hover:bg-gray-100'}`;
+                li.innerHTML = `
+                    <span class="truncate">${playlist.name}</span>
+                    <span class="text-xs text-gray-500">${playlist.channels.length} kanal</span>
+                `;
+                li.addEventListener('click', () => setCurrentPlaylist(playlist.id));
+                elements.playlistList.appendChild(li);
+            });
+        }
+
+        function renderChannelList() {
+            elements.channelList.innerHTML = '';
+            
+            if (!state.currentPlaylist || state.currentPlaylist.channels.length === 0) {
+                elements.channelList.innerHTML = `
+                    <div class="text-center py-10 text-gray-500">
+                        <i class="fas fa-tv text-4xl mb-2"></i>
+                        <p>Henüz kanal eklenmedi</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            state.currentPlaylist.channels.forEach((channel, index) => {
+                const channelElement = document.createElement('div');
+                channelElement.className = 'channel-item bg-white border border-gray-200 rounded-lg p-3 flex items-center';
+                channelElement.draggable = true;
+                channelElement.dataset.index = index;
+                
+                // Logo display - properly showing tvg-logo from imported M3U
+                const logoDisplay = channel.logo ? 
+                    `<img src="${channel.logo}" alt="${channel.name}" class="channel-logo">` : 
+                    `<div class="empty-logo">
+                        <i class="fas fa-tv"></i>
+                    </div>`;
+                
+                channelElement.innerHTML = `
+                    <div class="flex-shrink-0 mr-3">
+                        ${logoDisplay}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <h4 class="font-medium truncate">${channel.name}</h4>
+                        <p class="text-sm text-gray-500 truncate">${channel.url}</p>
+                        ${channel.category ? `<span class="inline-block bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded mt-1">${channel.category}</span>` : ''}
+                    </div>
+                    <div class="flex space-x-2">
+                        <button class="edit-channel-btn text-blue-600 hover:text-blue-800 p-1">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="delete-channel-btn text-red-600 hover:text-red-800 p-1">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                
+                elements.channelList.appendChild(channelElement);
+                
+                // Add event listeners to the buttons
+                channelElement.querySelector('.edit-channel-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    editChannel(index);
+                });
+                
+                channelElement.querySelector('.delete-channel-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteChannel(index);
+                });
+                
+                // Drag and drop events for reordering
+                channelElement.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', index);
+                    channelElement.classList.add('dragging');
+                });
+                
+                channelElement.addEventListener('dragend', () => {
+                    channelElement.classList.remove('dragging');
+                });
+                
+                channelElement.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    const draggingElement = document.querySelector('.dragging');
+                    if (draggingElement && draggingElement !== channelElement) {
+                        const boundingRect = channelElement.getBoundingClientRect();
+                        const offset = e.clientY - boundingRect.top;
+                        const middle = boundingRect.height / 2;
+                        
+                        if (offset < middle) {
+                            channelElement.style.borderTop = '2px solid #3b82f6';
+                            channelElement.style.borderBottom = '';
+                        } else {
+                            channelElement.style.borderBottom = '2px solid #3b82f6';
+                            channelElement.style.borderTop = '';
+                        }
+                    }
+                });
+                
+                channelElement.addEventListener('dragleave', () => {
+                    channelElement.style.borderTop = '';
+                    channelElement.style.borderBottom = '';
+                });
+                
+                channelElement.addEventListener('drop', (e) => {
+                    e.preventDefault();
+                    channelElement.style.borderTop = '';
+                    channelElement.style.borderBottom = '';
+                    
+                    const fromIndex = parseInt(e.dataTransfer.getData('text/plain'));
+                    const toIndex = index;
+                    
+                    if (fromIndex !== toIndex) {
+                        // Reorder channels
+                        const [movedChannel] = state.currentPlaylist.channels.splice(fromIndex, 1);
+                        state.currentPlaylist.channels.splice(toIndex, 0, movedChannel);
+                        renderChannelList();
+                    }
+                });
+            });
+        }
+
+        function renderCategoryList() {
+            elements.categoryList.innerHTML = '';
+            
+            if (state.categories.length === 0) {
+                elements.categoryList.innerHTML = '<li class="text-gray-500 italic">Henüz kategori yok</li>';
+                return;
+            }
+            
+            state.categories.forEach(category => {
+                const li = document.createElement('li');
+                li.className = 'category-item flex justify-between items-center bg-gray-100 rounded-lg px-3 py-2';
+                li.innerHTML = `
+                    <span>${category}</span>
+                    <div class="flex space-x-2">
+                        <button class="edit-category-btn text-blue-600 hover:text-blue-800">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="delete-category-btn text-red-600 hover:text-red-800">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                `;
+                
+                li.querySelector('.edit-category-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showEditCategoryModal(category);
+                });
+                
+                li.querySelector('.delete-category-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteCategory(category);
+                });
+                
+                elements.categoryList.appendChild(li);
+            });
+        }
+
+        function renderCategorySelect() {
+            elements.channelCategorySelect.innerHTML = '<option value="">Kategori seçin</option>';
+            state.categories.forEach(category => {
+                const option = document.createElement('option');
+                option.value = category;
+                option.textContent = category;
+                elements.channelCategorySelect.appendChild(option);
+            });
+        }
+
+        function updatePlaylistInfo() {
+            if (state.currentPlaylist) {
+                elements.currentPlaylistName.textContent = state.currentPlaylist.name;
+                const channelCount = state.currentPlaylist.channels.length;
+                elements.channelCount.textContent = `${channelCount} ${channelCount === 1 ? 'kanal' : 'kanal'}`;
+            }
+        }
+
+        // File Handling
+        function handleFileImport() {
+            const file = elements.fileInput.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const content = e.target.result;
+                    const playlist = parseM3U(content);
+                    
+                    // Ask for playlist name
+                    const fileName = file.name.replace('.m3u', '').replace('.m3u8', '');
+                    const playlistName = prompt('Bu liste için bir ad girin:', fileName) || fileName;
+                    
+                    const newPlaylist = {
+                        id: Date.now().toString(),
+                        name: playlistName,
+                        channels: playlist.channels,
+                        createdAt: new Date().toISOString()
+                    };
+                    
+                    // Extract categories from channels
+                    const categories = new Set();
+                    playlist.channels.forEach(channel => {
+                        if (channel.category) {
+                            categories.add(channel.category);
+                        }
+                    });
+                    
+                    // Add new categories to state
+                    categories.forEach(cat => {
+                        if (!state.categories.includes(cat)) {
+                            state.categories.push(cat);
+                        }
+                    });
+                    
+                    state.playlists.push(newPlaylist);
+                    state.currentPlaylist = newPlaylist;
+                    
+                    renderPlaylistList();
+                    renderChannelList();
+                    renderCategoryList();
+                    renderCategorySelect();
+                    updatePlaylistInfo();
+                    toggleMainUI(true);
+                    
+                    // Reset file input
+                    elements.fileInput.value = '';
+                } catch (error) {
+                    alert('M3U dosyası okunurken hata oluştu: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function handleLogoUpload() {
+            const file = elements.logoFileInput.files[0];
+            if (!file) return;
+            
+            // In a real app, you would upload this to a server
+            // For this demo, we'll create a local object URL
+            const logoUrl = URL.createObjectURL(file);
+            elements.channelLogoInput.value = logoUrl;
+            updateLogoPreview();
+        }
+
+        function saveM3UFile() {
+            if (!state.currentPlaylist || state.currentPlaylist.channels.length === 0) {
+                alert('Kaydedilecek kanal yok!');
+                return;
+            }
+            
+            const m3uContent = generateM3U(state.currentPlaylist);
+            const blob = new Blob([m3uContent], { type: 'application/x-mpegURL' });
+            const url = URL.createObjectURL(blob);
+            
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `${state.currentPlaylist.name.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.m3u`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // M3U Parsing and Generation
+        function parseM3U(content) {
+            const lines = content.split('\n');
+            const playlist = { channels: [] };
+            let currentChannel = null;
+            
+            for (const line of lines) {
+                const trimmedLine = line.trim();
+                
+                if (trimmedLine.startsWith('#EXTINF:')) {
+                    // Parse EXTINF line
+                    const extinf = trimmedLine.substring(8).trim();
+                    const parts = extinf.split(',');
+                    const attrs = parts[0];
+                    const name = parts.slice(1).join(',').trim();
+                    
+                    // Parse attributes (including tvg-logo)
+                    const attrRegex = /([a-zA-Z-]+)=("([^"]*)"|([^,]*))/g;
+                    const attributes = {};
+                    let match;
+                    
+                    while ((match = attrRegex.exec(attrs)) !== null) {
+                        const key = match[1];
+                        const value = match[3] || match[4];
+                        attributes[key] = value;
+                    }
+                    
+                    currentChannel = {
+                        name,
+                        url: '',
+                        logo: attributes['tvg-logo'] || attributes['tvglogo'] || '',
+                        category: attributes['group-title'] || attributes['group'] || ''
+                    };
+                } else if (trimmedLine && !trimmedLine.startsWith('#') && currentChannel) {
+                    // URL line
+                    currentChannel.url = trimmedLine;
+                    playlist.channels.push(currentChannel);
+                    currentChannel = null;
+                }
+            }
+            
+            return playlist;
+        }
+
+        function generateM3U(playlist) {
+            let m3u = '#EXTM3U\n';
+            
+            playlist.channels.forEach(channel => {
+                const attrs = [];
+                if (channel.logo) attrs.push(`tvg-logo="${channel.logo}"`);
+                if (channel.category) attrs.push(`group-title="${channel.category}"`);
+                
+                const extinf = `#EXTINF:-1 ${attrs.join(' ')},${channel.name}\n`;
+                m3u += extinf + channel.url + '\n';
+            });
+            
+            return m3u;
+        }
+
+        // Initialize
+        function init() {
+            setupEventListeners();
+            renderPlaylistList();
+            renderCategoryList();
+            renderCategorySelect();
+            toggleMainUI(false);
+            
+            // Start with empty categories
+            state.categories = [];
+            
+            renderPlaylistList();
+            renderCategoryList();
+            renderCategorySelect();
+        }
+
+        // Start the app
+        init();
+    </script>
+</body>
+</html>
