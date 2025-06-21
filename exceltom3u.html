@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel to M3U Converter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .file-upload {
+            position: relative;
+            overflow: hidden;
+        }
+        .file-upload-input {
+            position: absolute;
+            top: 0;
+            right: 0;
+            margin: 0;
+            padding: 0;
+            font-size: 20px;
+            cursor: pointer;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+        }
+        #drop-area {
+            border: 3px dashed #ccc;
+            transition: all 0.3s;
+        }
+        #drop-area.highlight {
+            border-color: #3b82f6;
+            background-color: #ebf5ff;
+        }
+        .progress-bar {
+            transition: width 0.6s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Excel to M3U Converter</h1>
+            <p class="text-gray-600">Convert your Excel document to M3U playlist format with TV guide information</p>
+        </div>
+
+        <div id="drop-area" 
+             class="bg-white rounded-xl shadow-md p-6 mb-8 cursor-pointer transition-colors duration-200 hover:bg-gray-50">
+            <div class="text-center py-8">
+                <i class="fas fa-file-excel text-blue-500 text-5xl mb-4"></i>
+                <h2 class="text-xl font-semibold mb-2">Upload Excel File</h2>
+                <p class="text-gray-500 mb-4">Drag & drop your file here or click to browse</p>
+                <div class="file-upload inline-block relative">
+                    <button class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-md transition-colors duration-200">
+                        <i class="fas fa-upload mr-2"></i>Select File
+                    </button>
+                    <input type="file" id="fileInput" class="file-upload-input" accept=".xlsx, .xls, .csv" />
+                </div>
+                <p class="text-sm text-gray-400 mt-4">Supported formats: .xlsx, .xls, .csv</p>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <h2 class="text-xl font-semibold mb-4">Column Mapping</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                <div>
+                    <label for="tvgName" class="block text-sm font-medium text-gray-700 mb-1">tvg-name</label>
+                    <select id="tvgName" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Select column</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="tvgLogo" class="block text-sm font-medium text-gray-700 mb-1">tvg-logo</label>
+                    <select id="tvgLogo" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Select column</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="groupTitle" class="block text-sm font-medium text-gray-700 mb-1">group-title</label>
+                    <select id="groupTitle" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Select column</option>
+                    </select>
+                </div>
+                <div>
+                    <label for="url" class="block text-sm font-medium text-gray-700 mb-1">Playback URL</label>
+                    <select id="url" class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500">
+                        <option value="">Select column</option>
+                    </select>
+                </div>
+            </div>
+            <div class="flex items-center">
+                <input type="checkbox" id="includeHeader" checked class="mr-2 h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded">
+                <label for="includeHeader" class="text-sm text-gray-700">Use first row as header</label>
+            </div>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold">Preview</h2>
+                <button id="downloadBtn" disabled class="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-4 rounded-md transition-colors duration-200 flex items-center">
+                    <i class="fas fa-download mr-2"></i> Download M3U
+                </button>
+            </div>
+            <div id="progressContainer" class="hidden mb-4">
+                <div class="flex justify-between text-sm text-gray-600 mb-1">
+                    <span>Processing...</span>
+                    <span id="progressValue">0%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                    <div id="progressBar" class="progress-bar bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+                </div>
+            </div>
+            <div id="previewContent" class="border border-gray-200 rounded-md p-4 h-64 overflow-y-auto bg-gray-50 text-sm font-mono text-gray-700">
+                <p class="text-gray-400">Your M3U preview will appear here after uploading and mapping your Excel file.</p>
+            </div>
+        </div>
+
+        <div class="text-center text-gray-500 text-sm">
+            <p>Excel to M3U Converter &copy; 2023</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const dropArea = document.getElementById('drop-area');
+            const fileInput = document.getElementById('fileInput');
+            const tvgNameSelect = document.getElementById('tvgName');
+            const tvgLogoSelect = document.getElementById('tvgLogo');
+            const groupTitleSelect = document.getElementById('groupTitle');
+            const urlSelect = document.getElementById('url');
+            const includeHeaderCheckbox = document.getElementById('includeHeader');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const previewContent = document.getElementById('previewContent');
+            const progressContainer = document.getElementById('progressContainer');
+            const progressBar = document.getElementById('progressBar');
+            const progressValue = document.getElementById('progressValue');
+
+            let workbook = null;
+            let worksheet = null;
+            let jsonData = [];
+
+            // Prevent default drag behaviors
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            // Highlight drop area when item is dragged over it
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropArea.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropArea.addEventListener(eventName, unhighlight, false);
+            });
+
+            // Handle dropped files
+            dropArea.addEventListener('drop', handleDrop, false);
+
+            // Handle selected files
+            fileInput.addEventListener('change', handleFiles, false);
+
+            // Click on drop area to trigger file input
+            dropArea.addEventListener('click', () => {
+                fileInput.click();
+            });
+
+            // Update preview when mapping changes
+            [tvgNameSelect, tvgLogoSelect, groupTitleSelect, urlSelect, includeHeaderCheckbox].forEach(element => {
+                element.addEventListener('change', updatePreview);
+            });
+
+            // Download button click handler
+            downloadBtn.addEventListener('click', downloadM3U);
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            function highlight() {
+                dropArea.classList.add('highlight');
+            }
+
+            function unhighlight() {
+                dropArea.classList.remove('highlight');
+            }
+
+            function handleDrop(e) {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                handleFiles({target: {files}});
+            }
+
+            function handleFiles(e) {
+                const files = e.target.files;
+                if (files.length === 0) return;
+
+                const file = files[0];
+                processExcelFile(file);
+            }
+
+            function processExcelFile(file) {
+                progressContainer.classList.remove('hidden');
+                progressBar.style.width = '0%';
+                progressValue.textContent = '0%';
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = new Uint8Array(e.target.result);
+                        updateProgress(30);
+                        workbook = XLSX.read(data, {type: 'array'});
+                        
+                        updateProgress(60);
+                        // Get the first worksheet
+                        const firstSheetName = workbook.SheetNames[0];
+                        worksheet = workbook.Sheets[firstSheetName];
+
+                        // Convert to JSON
+                        jsonData = XLSX.utils.sheet_to_json(worksheet, {
+                            header: includeHeaderCheckbox.checked ? 1 : undefined,
+                            defval: ""
+                        });
+
+                        updateProgress(90);
+                        populateColumnSelects();
+                        updatePreview();
+                        updateProgress(100);
+
+                        setTimeout(() => {
+                            progressContainer.classList.add('hidden');
+                        }, 1000);
+                    } catch (error) {
+                        console.error(error);
+                        showError("Error processing Excel file. Please check the file format.");
+                        progressContainer.classList.add('hidden');
+                    }
+                };
+                reader.onerror = function() {
+                    showError("Error reading file");
+                    progressContainer.classList.add('hidden');
+                };
+                reader.readAsArrayBuffer(file);
+            }
+
+            function updateProgress(percent) {
+                progressBar.style.width = `${percent}%`;
+                progressValue.textContent = `${percent}%`;
+            }
+
+            function populateColumnSelects() {
+                if (jsonData.length === 0) return;
+
+                // Get header row (if exists) or column indexes
+                const headers = includeHeaderCheckbox.checked && jsonData.length > 0 ? 
+                    jsonData[0] : 
+                    Array.from({length: Object.keys(jsonData[0] || {}).length}, (_, i) => `Column ${i+1}`);
+
+                const selectElements = [tvgNameSelect, tvgLogoSelect, groupTitleSelect, urlSelect];
+                
+                selectElements.forEach(select => {
+                    // Save current value
+                    const currentValue = select.value;
+                    
+                    // Clear options except the first empty one
+                    while (select.options.length > 1) {
+                        select.remove(1);
+                    }
+                    
+                    // Add new options
+                    headers.forEach((header, index) => {
+                        const option = document.createElement('option');
+                        option.value = index;
+                        option.textContent = header || `Column ${index + 1}`;
+                        select.appendChild(option);
+                    });
+                    
+                    // Restore previous selection if it exists in new options
+                    if (currentValue && [...select.options].some(opt => opt.value === currentValue)) {
+                        select.value = currentValue;
+                    }
+                });
+            }
+
+            function updatePreview() {
+                if (!jsonData || jsonData.length === 0) {
+                    previewContent.innerHTML = '<p class="text-gray-400">Your M3U preview will appear here after uploading and mapping your Excel file.</p>';
+                    downloadBtn.disabled = true;
+                    return;
+                }
+
+                const tvgNameCol = parseInt(tvgNameSelect.value);
+                const tvgLogoCol = parseInt(tvgLogoSelect.value);
+                const groupTitleCol = parseInt(groupTitleSelect.value);
+                const urlCol = parseInt(urlSelect.value);
+
+                // Validate required column (URL)
+                if (isNaN(urlCol)) {
+                    previewContent.innerHTML = '<p class="text-red-500">Please select the Playback URL column.</p>';
+                    downloadBtn.disabled = true;
+                    return;
+                }
+
+                const startRow = includeHeaderCheckbox.checked ? 1 : 0;
+                let previewLines = ['#EXTM3U'];
+                
+                // Process up to 20 rows for preview
+                const previewRows = Math.min(20, jsonData.length);
+                
+                for (let i = startRow; i < previewRows; i++) {
+                    const row = jsonData[i] || [];
+                    
+                    // Skip empty rows
+                    if (!row[urlCol]) continue;
+                    
+                    // Build EXTINF line
+                    let extinfLine = '#EXTINF:-1';
+                    
+                    if (!isNaN(tvgNameCol) && row[tvgNameCol]) {
+                        extinfLine += ` tvg-name="${escapeAttribute(row[tvgNameCol])}"`;
+                    }
+                    
+                    if (!isNaN(tvgLogoCol) && row[tvgLogoCol]) {
+                        extinfLine += ` tvg-logo="${escapeAttribute(row[tvgLogoCol])}"`;
+                    }
+                    
+                    if (!isNaN(groupTitleCol) && row[groupTitleCol]) {
+                        extinfLine += ` group-title="${escapeAttribute(row[groupTitleCol])}"`;
+                    }
+                    
+                    // Add channel name (use tvg-name or column value for name)
+                    const channelName = !isNaN(tvgNameCol) && row[tvgNameCol] ? 
+                        row[tvgNameCol] : 
+                        (includeHeaderCheckbox.checked && jsonData[0][urlCol] ? jsonData[0][urlCol] : `Channel ${i + 1}`);
+                    
+                    extinfLine += `,${escapeAttribute(channelName)}`;
+                    
+                    previewLines.push(extinfLine);
+                    previewLines.push(row[urlCol]);
+                }
+                
+                if (previewLines.length <= 1) {
+                    previewContent.innerHTML = '<p class="text-red-500">No valid data found with the current mapping.</p>';
+                    downloadBtn.disabled = true;
+                } else {
+                    previewContent.textContent = previewLines.join('\n');
+                    downloadBtn.disabled = false;
+                }
+            }
+
+            function escapeAttribute(value) {
+                return String(value).replace(/"/g, '\\"').replace(/\n/g, ' ').replace(/\r/g, '');
+            }
+
+            function downloadM3U() {
+                if (!jsonData || jsonData.length === 0) return;
+
+                const tvgNameCol = parseInt(tvgNameSelect.value);
+                const tvgLogoCol = parseInt(tvgLogoSelect.value);
+                const groupTitleCol = parseInt(groupTitleSelect.value);
+                const urlCol = parseInt(urlSelect.value);
+
+                if (isNaN(urlCol)) return;
+
+                const startRow = includeHeaderCheckbox.checked ? 1 : 0;
+                let m3uContent = ['#EXTM3U'];
+                
+                progressContainer.classList.remove('hidden');
+                progressBar.style.width = '0%';
+                progressValue.textContent = '0%';
+                
+                // Process in chunks to show progress
+                const totalRows = jsonData.length;
+                const chunkSize = Math.floor(totalRows / 20) || 1;
+                
+                setTimeout(() => {
+                    for (let i = startRow; i < totalRows; i++) {
+                        const row = jsonData[i] || [];
+                        
+                        // Skip empty rows
+                        if (!row[urlCol]) continue;
+                        
+                        // Build EXTINF line
+                        let extinfLine = '#EXTINF:-1';
+                        
+                        if (!isNaN(tvgNameCol) && row[tvgNameCol]) {
+                            extinfLine += ` tvg-name="${escapeAttribute(row[tvgNameCol])}"`;
+                        }
+                        
+                        if (!isNaN(tvgLogoCol) && row[tvgLogoCol]) {
+                            extinfLine += ` tvg-logo="${escapeAttribute(row[tvgLogoCol])}"`;
+                        }
+                        
+                        if (!isNaN(groupTitleCol) && row[groupTitleCol]) {
+                            extinfLine += ` group-title="${escapeAttribute(row[groupTitleCol])}"`;
+                        }
+                        
+                        // Add channel name
+                        const channelName = !isNaN(tvgNameCol) && row[tvgNameCol] ? 
+                            row[tvgNameCol] : 
+                            (includeHeaderCheckbox.checked && jsonData[0][urlCol] ? jsonData[0][urlCol] : `Channel ${i + 1}`);
+                        
+                        extinfLine += `,${escapeAttribute(channelName)}`;
+                        
+                        m3uContent.push(extinfLine);
+                        m3uContent.push(row[urlCol]);
+                        
+                        // Update progress periodically
+                        if (i % chunkSize === 0) {
+                            const progress = Math.floor(((i - startRow) / (totalRows - startRow)) * 100);
+                            progressBar.style.width = `${progress}%`;
+                            progressValue.textContent = `${progress}%`;
+                        }
+                    }
+                    
+                    progressBar.style.width = '100%';
+                    progressValue.textContent = '100%';
+                    
+                    // Create download
+                    const blob = new Blob([m3uContent.join('\n')], {type: 'application/x-mpegURL'});
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = 'playlist.m3u';
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    URL.revokeObjectURL(url);
+                    
+                    setTimeout(() => {
+                        progressContainer.classList.add('hidden');
+                    }, 1000);
+                }, 100);
+            }
+
+            function showError(message) {
+                previewContent.innerHTML = `<p class="text-red-500">${message}</p>`;
+                downloadBtn.disabled = true;
+            }
+        });
+    </script>
+</body>
+</html>
