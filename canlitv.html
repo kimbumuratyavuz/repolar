@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MuratFlix</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+        
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #141414;
+        }
+        
+        .hero-gradient {
+            background: linear-gradient(to top, #141414 0%, rgba(20, 20, 20, 0.5) 100%);
+        }
+        
+        .movie-card {
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .movie-card:hover {
+            transform: scale(1.1) translateY(-10px);
+            z-index: 10;
+        }
+        
+        .movie-card:hover .movie-info {
+            opacity: 1;
+        }
+        
+        .movie-info {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        #videoModal {
+            transition: opacity 0.3s ease;
+            display: none;
+            opacity: 0;
+        }
+        
+        #videoModal.modal-visible {
+            display: flex;
+            opacity: 1;
+        }
+        
+        .loader {
+            border-top-color: #e50914;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #videoPlayer {
+            width: 100%;
+            max-height: 80vh;
+            border-radius: 8px;
+        }
+        
+        #searchContainer {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 100%;
+            max-width: 500px;
+            height: 100vh;
+            background-color: rgba(20, 20, 20, 0.98);
+            z-index: 100;
+            transition: right 0.3s ease;
+            padding: 20px;
+            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.5);
+        }
+        
+        #searchContainer.visible {
+            right: 0;
+        }
+        
+        .search-result-item {
+            transition: all 0.2s ease;
+        }
+        
+        .search-result-item:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+        
+        .nav-gradient {
+            background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%);
+        }
+        
+        .hero-title {
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+        }
+        
+        .category-title {
+            position: relative;
+            display: inline-block;
+        }
+        
+        .category-title::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            bottom: -5px;
+            width: 100%;
+            height: 2px;
+            background: linear-gradient(to right, #e50914, transparent);
+        }
+        
+        .blur-backdrop {
+            filter: blur(5px);
+            opacity: 0.5;
+        }
+        
+        .fixed-logo {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 50;
+        }
+    </style>
+</head>
+<body class="bg-black text-white min-h-screen">
+    <!-- Fixed Logo -->
+    <div class="fixed-logo">
+        <h1 class="text-red-600 font-bold text-3xl">MuratFlix</h1>
+    </div>
+
+    <!-- Hero Section - Minecraft Movie -->
+    <div class="relative h-[70vh] overflow-hidden">
+        <div class="absolute inset-0 hero-gradient z-10 flex items-end pb-20 px-10">
+            <div class="max-w-3xl">
+                <h1 class="hero-title text-5xl md:text-6xl font-bold mb-4">Bir Minecraft Filmi</h1>
+                <p class="text-lg md:text-xl mb-6">Dört uyumsuz Garrett "Çöp Adam" Garrison, Henry, Natalie ve Dawn gizemli bir geçitten aniden Overworld'e çekildiklerinde kendilerini sıradan sorunlarla mücadele ederken bulurlar. Hayal gücüyle gelişen tuhaf, kübik bir harikalar diyarına gelmişlerdir. Eve dönmek için bu dünyada ustalaşmaları (ayrıca onu Piglinler ve Zombiler gibi kötü şeylerden de korumaları) ve beklenmedik, uzman bir inşacı olan Steve'le büyülü bir maceraya atılmaları gerekecektir. Birlikte atılacakları macera, beşini de cesur olmaya ve her birini benzersiz bir şekilde yaratıcı kılan nitelikleriyle yeniden bağlantı kurmaya zorlayacak..</p>
+                <div class="flex space-x-4">
+                  
+                </div>
+            </div>
+        </div>
+        <div class="absolute inset-0 z-0">
+            <img src="https://cdn.webtekno.com/media/cache/content_detail/article/156302/bir-minecraft-filmi-fragmani-konusu-oyuncu-kadrosu-vizyon-tarihi-1740715768.jpg" alt="Minecraft Movie" class="w-full h-full object-cover">
+        </div>
+    </div>
+
+    <!-- Search Container -->
+    <div id="searchContainer">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl font-bold">Search</h2>
+            <button id="closeSearch" class="text-white hover:text-red-500 text-2xl">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="relative mb-6">
+            <input 
+                type="text" 
+                id="searchInput" 
+                placeholder="Search movies..." 
+                class="w-full bg-gray-800 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
+                autocomplete="off"
+            >
+            <button id="clearSearch" class="absolute right-3 top-3 text-gray-400 hover:text-white">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div id="searchResults" class="overflow-y-auto h-[calc(100vh-150px)]">
+            <p class="text-gray-400 text-center py-10">Search for movies to see results</p>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <main class="pt-10 pb-20 px-4 md:px-10">
+        <!-- Loading State -->
+        <div id="loading" class="flex flex-col items-center justify-center h-64">
+            <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
+            <p class="text-white">Loading content...</p>
+        </div>
+
+        <!-- Content Sections -->
+        <div id="content" class="hidden">
+            <!-- Content will be dynamically inserted here -->
+        </div>
+    </main>
+
+    <!-- Video Player Modal -->
+    <div id="videoModal" class="fixed inset-0 bg-black bg-opacity-90 z-50 items-center justify-center p-4">
+        <div class="relative w-full max-w-6xl">
+            <button id="closeModal" class="absolute -top-12 right-0 text-white hover:text-red-500 text-3xl z-50">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="aspect-w-16 aspect-h-9 w-full">
+                <video id="videoPlayer" controls autoplay class="w-full h-full rounded-lg"></video>
+            </div>
+            <div class="mt-4 text-white">
+                <h2 id="videoTitle" class="text-2xl font-bold mb-2">Movie Title</h2>
+                <div class="flex space-x-4 mb-4">
+                    <span class="text-green-500 font-semibold">98% Match</span>
+                    <span>2023</span>
+                    <span class="border border-gray-400 px-1">HD</span>
+                </div>
+                <div class="flex space-x-4 mb-4">
+                    
+                </div>
+                <p id="videoDescription" class="text-gray-300">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const loadingElement = document.getElementById('loading');
+            const contentElement = document.getElementById('content');
+            const videoModal = document.getElementById('videoModal');
+            const videoPlayer = document.getElementById('videoPlayer');
+            const closeModal = document.getElementById('closeModal');
+            const searchBtn = document.getElementById('searchBtn');
+            const searchContainer = document.getElementById('searchContainer');
+            const closeSearch = document.getElementById('closeSearch');
+            const searchInput = document.getElementById('searchInput');
+            const clearSearch = document.getElementById('clearSearch');
+            const searchResults = document.getElementById('searchResults');
+            const videoTitle = document.getElementById('videoTitle');
+            const videoDescription = document.getElementById('videoDescription');
+            
+            // Global variables
+            let hls = null;
+            let allChannels = [];
+            let categories = {};
+            
+            // Fetch data from the URL
+            fetch('https://raw.githubusercontent.com/kimbumuratyavuz/capcanli/refs/heads/main/film.m3u')
+                .then(response => response.text())
+                .then(data => {
+                    // Process the M3U data
+                    allChannels = parseM3U(data);
+                    
+                    // Group channels by category
+                    categories = groupByCategory(allChannels);
+                    
+                    // Render the content
+                    renderContent(categories);
+                    
+                    // Hide loading, show content
+                    loadingElement.classList.add('hidden');
+                    contentElement.classList.remove('hidden');
+                    
+                    // Add click event listeners to all movie cards
+                    document.querySelectorAll('.movie-card').forEach(card => {
+                        card.addEventListener('click', function() {
+                            const m3u8Url = this.querySelector('img').getAttribute('data-url');
+                            const title = this.querySelector('img').getAttribute('alt');
+                            playVideo(m3u8Url, title);
+                        });
+                    });
+                })
+                .catch(error => {
+                    console.error('Error fetching data:', error);
+                    loadingElement.innerHTML = `
+                        <div class="bg-red-900 text-white p-4 rounded-lg">
+                            <p class="font-bold">Error loading content</p>
+                            <p>${error.message}</p>
+                        </div>
+                    `;
+                });
+            
+            // Parse M3U file content
+            function parseM3U(content) {
+                const lines = content.split('\n');
+                const channels = [];
+                let currentChannel = {};
+                
+                for (const line of lines) {
+                    if (line.startsWith('#EXTINF')) {
+                        // Extract info from EXTINF line
+                        const info = line.split(',')[1];
+                        const groupMatch = line.match(/group-title="([^"]+)"/);
+                        const logoMatch = line.match(/tvg-logo="([^"]+)"/);
+                        
+                        currentChannel = {
+                            name: info.trim(),
+                            group: groupMatch ? groupMatch[1] : 'Filmler',
+                            logo: logoMatch ? logoMatch[1] : 'https://via.placeholder.com/200x300?text=No+Image',
+                            year: Math.floor(Math.random() * 20) + 2000, // Random year for demo
+                            rating: (Math.random() * 3 + 7).toFixed(1) // Random rating 7-10
+                        };
+                    } else if (line.startsWith('http')) {
+                        // This is the URL line
+                        currentChannel.url = line.trim();
+                        channels.push(currentChannel);
+                        currentChannel = {};
+                    }
+                }
+                
+                return channels;
+            }
+            
+            // Group channels by category
+            function groupByCategory(channels) {
+                const categories = {};
+                
+                channels.forEach(channel => {
+                    if (!categories[channel.group]) {
+                        categories[channel.group] = [];
+                    }
+                    categories[channel.group].push(channel);
+                });
+                
+                return categories;
+            }
+            
+            // Render the content
+            function renderContent(categories) {
+                let html = '';
+                
+                
+                // Other categories
+                for (const [category, channels] of Object.entries(categories)) {
+                    html += `
+                        <section class="mb-16">
+                            <h2 class="category-title text-xl md:text-2xl font-bold mb-6 px-2">${category}</h2>
+                            <div class="relative">
+                                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 px-2">
+                                    ${channels.map(channel => `
+                                        <div class="movie-card relative rounded-lg overflow-hidden">
+                                            <img 
+                                                src="${channel.logo}" 
+                                                alt="${channel.name}" 
+                                                class="w-full h-auto object-cover rounded-lg"
+                                                data-url="${channel.url}"
+                                            >
+                                            <div class="movie-info absolute inset-0 bg-black bg-opacity-70 flex flex-col justify-end p-3">
+                                                <div class="flex items-center mb-2">
+                                                    <span class="text-green-500 text-sm font-bold mr-2">${channel.rating}</span>
+                                                    <span class="text-gray-300 text-xs">${channel.year}</span>
+                                                </div>
+                                                <p class="text-white text-sm font-semibold">${channel.name}</p>
+                                            </div>
+                                        </div>
+                                    `).join('')}
+                                </div>
+                            </div>
+                        </section>
+                    `;
+                }
+                
+                contentElement.innerHTML = html;
+            }
+            
+            // Play video function
+            function playVideo(url, title = 'Movie') {
+                console.log('Attempting to play video:', url);
+                
+                // Set video info
+                videoTitle.textContent = title;
+                videoDescription.textContent = ` ${title} şimdi Muratflix'de İyi seyirler..`;
+                
+                // Clean up previous HLS instance if exists
+                if (hls) {
+                    hls.destroy();
+                }
+                
+                // Show modal
+                videoModal.classList.add('modal-visible');
+                document.body.style.overflow = 'hidden';
+                
+                // Check if URL is M3U8
+                if (url.includes('.m3u8')) {
+                    if (Hls.isSupported()) {
+                        hls = new Hls();
+                        hls.loadSource(url);
+                        hls.attachMedia(videoPlayer);
+                        hls.on(Hls.Events.MANIFEST_PARSED, function() {
+                            videoPlayer.play().catch(e => {
+                                console.error('Autoplay failed:', e);
+                                // Show play button to user
+                                videoPlayer.controls = true;
+                            });
+                        });
+                        
+                        // Handle errors
+                        hls.on(Hls.Events.ERROR, function(event, data) {
+                            if (data.fatal) {
+                                switch(data.type) {
+                                    case Hls.ErrorTypes.NETWORK_ERROR:
+                                        console.error('Network error');
+                                        break;
+                                    case Hls.ErrorTypes.MEDIA_ERROR:
+                                        console.error('Media error');
+                                        hls.recoverMediaError();
+                                        break;
+                                    default:
+                                        console.error('Unrecoverable error');
+                                        break;
+                                }
+                            }
+                        });
+                    } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                        // For Safari
+                        videoPlayer.src = url;
+                        videoPlayer.addEventListener('loadedmetadata', function() {
+                            videoPlayer.play().catch(e => {
+                                console.error('Autoplay failed:', e);
+                                videoPlayer.controls = true;
+                            });
+                        });
+                    }
+                } else {
+                    // For direct video files
+                    videoPlayer.src = url;
+                    videoPlayer.play().catch(e => {
+                        console.error('Autoplay failed:', e);
+                        videoPlayer.controls = true;
+                    });
+                }
+            }
+            
+            // Close modal function
+            function closeVideoModal() {
+                videoModal.classList.remove('modal-visible');
+                document.body.style.overflow = 'auto';
+                
+                // Pause and reset video
+                if (videoPlayer) {
+                    videoPlayer.pause();
+                    videoPlayer.src = '';
+                }
+                
+                // Destroy HLS instance if exists
+                if (hls) {
+                    hls.destroy();
+                    hls = null;
+                }
+            }
+            
+            // Search functionality
+            function performSearch(query) {
+                if (!query.trim()) {
+                    searchResults.innerHTML = '<p class="text-gray-400 text-center py-10">Search for movies to see results</p>';
+                    return;
+                }
+                
+                const lowerQuery = query.toLowerCase();
+                const results = allChannels.filter(channel => 
+                    channel.name.toLowerCase().includes(lowerQuery)
+                );
+                
+                if (results.length === 0) {
+                    searchResults.innerHTML = '<p class="text-gray-400 text-center py-10">No results found</p>';
+                    return;
+                }
+                
+                let html = results.map(channel => `
+                    <div 
+                        class="search-result-item p-3 rounded-lg cursor-pointer flex items-center space-x-3 mb-2"
+                        data-url="${channel.url}"
+                        data-title="${channel.name}"
+                    >
+                        <img 
+                            src="${channel.logo}" 
+                            alt="${channel.name}"
+                            class="w-16 h-16 object-cover rounded"
+                        >
+                        <div>
+                            <h3 class="font-medium">${channel.name}</h3>
+                            <div class="flex items-center">
+                                <span class="text-green-500 text-xs font-bold mr-2">${channel.rating}</span>
+                                <span class="text-gray-400 text-xs">${channel.year}</span>
+                            </div>
+                        </div>
+                    </div>
+                `).join('');
+                
+                searchResults.innerHTML = html;
+                
+                // Add click event to search results
+                document.querySelectorAll('.search-result-item').forEach(item => {
+                    item.addEventListener('click', function() {
+                        const url = this.getAttribute('data-url');
+                        const title = this.getAttribute('data-title');
+                        closeSearchContainer();
+                        playVideo(url, title);
+                    });
+                });
+            }
+            
+            // Open search container
+            function openSearchContainer() {
+                searchContainer.classList.add('visible');
+                document.body.style.overflow = 'hidden';
+                searchInput.focus();
+            }
+            
+            // Close search container
+            function closeSearchContainer() {
+                searchContainer.classList.remove('visible');
+                document.body.style.overflow = 'auto';
+                searchInput.value = '';
+                searchResults.innerHTML = '<p class="text-gray-400 text-center py-10">Search for movies to see results</p>';
+            }
+            
+            // Event listeners
+            closeSearch.addEventListener('click', closeSearchContainer);
+            clearSearch.addEventListener('click', () => {
+                searchInput.value = '';
+                searchInput.focus();
+                performSearch('');
+            });
+            
+            searchInput.addEventListener('input', (e) => {
+                performSearch(e.target.value);
+            });
+            
+            searchInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeSearchContainer();
+                }
+            });
+            
+            // Close modal when clicking the close button
+            closeModal.addEventListener('click', closeVideoModal);
+            
+            // Close modal when clicking outside
+            videoModal.addEventListener('click', function(e) {
+                if (e.target === videoModal) {
+                    closeVideoModal();
+                }
+            });
+            
+            // Close modal with ESC key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    if (videoModal.classList.contains('modal-visible')) {
+                        closeVideoModal();
+                    } else if (searchContainer.classList.contains('visible')) {
+                        closeSearchContainer();
+                    }
+                }
+            });
+        });
+    </script>
+</body>
+</html>
