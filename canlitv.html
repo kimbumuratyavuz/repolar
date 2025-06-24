@@ -1,548 +1,1728 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MuratFlix</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <title>MimuTv - IPTV Oynatıcı</title>
+    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/3800/3800088.png" type="image/png">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
-        
+        :root {
+            --primary-bg: #0f0f0f;
+            --secondary-bg: #272727;
+            --accent-color: #3ea6ff;
+            --accent-hover: #3ea6ff;
+            --text-primary: #f1f1f1;
+            --text-secondary: #aaa;
+            --success-color: #2ba640;
+            --danger-color: #ff4e45;
+            --warning-color: #ffa500;
+            --sidebar-width: 240px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Roboto', Arial, sans-serif;
+        }
+
         body {
-            font-family: 'Roboto', sans-serif;
-            background-color: #141414;
+            background-color: var(--primary-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
         }
-        
-        .hero-gradient {
-            background: linear-gradient(to top, #141414 0%, rgba(20, 20, 20, 0.5) 100%);
+
+        /* Scrollbar styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
         }
-        
-        .movie-card {
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 5px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #666;
+        }
+
+        /* Header styling */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 56px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 16px;
+            background-color: var(--primary-bg);
+            z-index: 100;
+            border-bottom: 1px solid #303030;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+        }
+
+        .menu-toggle {
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 20px;
+            margin-right: 16px;
+            cursor: pointer;
+            padding: 8px;
+            border-radius: 50%;
+        }
+
+        .menu-toggle:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+        }
+
+        .logo {
+            height: 20px;
+            cursor: pointer;
+        }
+
+        .search-bar {
+            display: flex;
+            flex: 1;
+            max-width: 640px;
+            margin: 0 40px;
+        }
+
+        .search-input {
+            flex: 1;
+            padding: 10px 16px;
+            background: #121212;
+            border: 1px solid #303030;
+            border-radius: 2px 0 0 2px;
+            color: var(--text-primary);
+            font-size: 16px;
+            outline: none;
+        }
+
+        .search-input:focus {
+            border-color: #1c62b9;
+            background: #121212;
+        }
+
+        .search-button {
+            width: 64px;
+            background: #303030;
+            border: 1px solid #303030;
+            border-left: none;
+            border-radius: 0 2px 2px 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .search-button:hover {
+            background: #404040;
+        }
+
+        .upload-buttons {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upload-btn {
+            background: transparent;
+            color: var(--text-primary);
+            padding: 8px 16px;
+            border-radius: 18px;
+            border: 1px solid #3f3f3f;
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s ease;
+            font-size: 14px;
+        }
+
+        .upload-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .url-btn {
+            background: var(--accent-color);
+            color: #0f0f0f;
+            border: none;
+        }
+
+        .url-btn:hover {
+            background: #65b8ff;
+        }
+
+        /* Sidebar styling */
+        .sidebar {
+            position: fixed;
+            top: 56px;
+            left: 0;
+            bottom: 0;
+            width: var(--sidebar-width);
+            background-color: var(--primary-bg);
+            overflow-y: auto;
+            padding: 12px 0;
+            z-index: 90;
+            border-right: 1px solid #303030;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        .sidebar-section {
+            padding: 8px 0;
+            border-bottom: 1px solid #303030;
+            margin-bottom: 12px;
+        }
+
+        .sidebar-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            cursor: pointer;
+            border-radius: 10px;
+            margin: 0 4px;
+            position: relative;
+        }
+
+        .sidebar-item:hover {
+            background-color: #303030;
+        }
+
+        .sidebar-item.active {
+            background-color: #4d4d4d;
+        }
+
+        .sidebar-item i {
+            margin-right: 16px;
+            font-size: 18px;
+            width: 20px;
+            text-align: center;
+        }
+
+        .sidebar-item-text {
+            font-size: 14px;
+            font-weight: 400;
+            flex-grow: 1;
+        }
+
+        .sidebar-item-count {
+            font-size: 12px;
+            color: var(--text-secondary);
+            margin-left: 8px;
+        }
+
+        .delete-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 4px;
+            border-radius: 4px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .edit-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 4px;
+            border-radius: 4px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+        }
+
+        .sidebar-item:hover .delete-btn,
+        .sidebar-item:hover .edit-btn {
+            opacity: 1;
+        }
+
+        .delete-btn:hover {
+            color: var(--danger-color);
+            background: rgba(255, 78, 69, 0.1);
+        }
+
+        .edit-btn:hover {
+            color: var(--accent-color);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        /* Main content styling */
+        .main-content {
+            margin-left: 0;
+            margin-top: 56px;
+            padding: 20px;
+            transition: margin 0.3s ease;
+        }
+
+        /* Categories styling */
+        .category-container {
+            margin-bottom: 30px;
+        }
+
+        .category-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .category-header:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .category-title {
+            font-size: 18px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .category-icon {
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .category-count {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .category-toggle {
+            transition: transform 0.3s ease;
+        }
+
+        .category-toggle.collapsed {
+            transform: rotate(-90deg);
+        }
+
+        .channels-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+            margin-top: 10px;
+        }
+
+        .channel-card {
+            background: transparent;
+            border-radius: 12px;
+            overflow: hidden;
             transition: all 0.3s ease;
             cursor: pointer;
         }
-        
-        .movie-card:hover {
-            transform: scale(1.1) translateY(-10px);
+
+        .channel-card:hover {
+            transform: translateY(-4px);
+        }
+
+        .channel-thumbnail {
+            position: relative;
+            aspect-ratio: 16/9;
+            background: #272727;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .channel-thumbnail img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.3s ease;
+        }
+
+        .channel-card:hover .channel-thumbnail img {
+            transform: scale(1.05);
+        }
+
+        .channel-info {
+            display: flex;
+            margin-top: 12px;
+        }
+
+        .channel-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            margin-right: 12px;
+            background: #555;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            flex-shrink: 0;
+        }
+
+        .channel-details {
+            flex: 1;
+        }
+
+        .channel-title {
+            color: var(--text-primary);
+            font-weight: 500;
+            margin-bottom: 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            font-size: 16px;
+            line-height: 1.4;
+        }
+
+        .channel-group {
+            font-size: 14px;
+            color: var(--text-secondary);
+            display: block;
+        }
+
+        /* Video modal */
+        .video-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .video-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 1200px;
+            aspect-ratio: 16/9;
+            background: #000;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+        }
+
+        .video-header {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            padding: 16px;
+            background: linear-gradient to bottom, rgba(0, 0, 0, 0.7), transparent);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
             z-index: 10;
         }
-        
-        .movie-card:hover .movie-info {
-            opacity: 1;
-        }
-        
-        .movie-info {
-            opacity: 0;
-            transition: opacity 0.3s ease;
-        }
-        
-        #videoModal {
-            transition: opacity 0.3s ease;
-            display: none;
-            opacity: 0;
-        }
-        
-        #videoModal.modal-visible {
+
+        .close-btn {
+            background: rgba(255, 255, 255, 0.1);
+            border: none;
+            color: white;
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
             display: flex;
-            opacity: 1;
-        }
-        
-        .loader {
-            border-top-color: #e50914;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        #videoPlayer {
-            width: 100%;
-            max-height: 80vh;
-            border-radius: 8px;
-        }
-        
-        #searchContainer {
-            position: fixed;
-            top: 0;
-            right: -100%;
-            width: 100%;
-            max-width: 500px;
-            height: 100vh;
-            background-color: rgba(20, 20, 20, 0.98);
-            z-index: 100;
-            transition: right 0.3s ease;
-            padding: 20px;
-            box-shadow: -5px 0 15px rgba(0, 0, 0, 0.5);
-        }
-        
-        #searchContainer.visible {
-            right: 0;
-        }
-        
-        .search-result-item {
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
             transition: all 0.2s ease;
         }
-        
-        .search-result-item:hover {
-            background-color: rgba(255, 255, 255, 0.1);
+
+        .close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: rotate(90deg);
         }
-        
-        .nav-gradient {
-            background: linear-gradient(to bottom, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0) 100%);
-        }
-        
-        .hero-title {
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-        }
-        
-        .category-title {
-            position: relative;
-            display: inline-block;
-        }
-        
-        .category-title::after {
-            content: '';
-            position: absolute;
-            left: 0;
-            bottom: -5px;
+
+        video {
             width: 100%;
-            height: 2px;
-            background: linear-gradient(to right, #e50914, transparent);
+            height: 100%;
+            background: black;
         }
-        
-        .blur-backdrop {
-            filter: blur(5px);
+
+        /* Empty state */
+        .empty-state {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            color: var(--text-secondary);
+            max-width: 400px;
+            padding: 0 20px;
+        }
+
+        .empty-state i {
+            font-size: 64px;
+            margin-bottom: 16px;
             opacity: 0.5;
         }
-        
-        .fixed-logo {
+
+        .empty-state h3 {
+            font-size: 20px;
+            margin-bottom: 12px;
+            color: var(--text-primary);
+        }
+
+        .empty-state p {
+            margin-bottom: 24px;
+        }
+
+        /* URL input modal */
+        .url-modal {
+            display: none;
             position: fixed;
-            top: 20px;
-            left: 20px;
-            z-index: 50;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .url-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 500px;
+            background: var(--secondary-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            padding: 24px;
+        }
+
+        .url-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .url-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .url-input-container {
+            margin-bottom: 20px;
+        }
+
+        .url-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .url-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .url-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .url-cancel-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .url-cancel-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .url-submit-btn {
+            background: var(--accent-color);
+            color: #0f0f0f;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .url-submit-btn:hover {
+            background: #65b8ff;
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: var(--secondary-bg);
+            color: white;
+            padding: 16px 24px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            z-index: 3000;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast.success {
+            border-left: 4px solid var(--success-color);
+        }
+
+        .toast.error {
+            border-left: 4px solid var(--danger-color);
+        }
+
+        .toast.warning {
+            border-left: 4px solid var(--warning-color);
+        }
+
+        .toast i {
+            font-size: 20px;
+        }
+
+        .toast.success i {
+            color: var(--success-color);
+        }
+
+        .toast.error i {
+            color: var(--danger-color);
+        }
+
+        .toast.warning i {
+            color: var(--warning-color);
+        }
+
+        /* Footer */
+        .footer {
+            position: fixed;
+            bottom: 10px;
+            left: 10px;
+            color: var(--text-secondary);
+            font-size: 12px;
+            z-index: 100;
+        }
+
+        .footer a {
+            color: var(--accent-color);
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .footer a:hover {
+            color: var(--accent-hover);
+            text-decoration: underline;
+        }
+
+        /* Confirmation Dialog */
+        .confirmation-dialog {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .confirmation-content {
+            background: var(--secondary-bg);
+            padding: 24px;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .confirmation-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .confirmation-message {
+            margin-bottom: 24px;
+            color: var(--text-secondary);
+        }
+
+        .confirmation-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .confirmation-btn {
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+        }
+
+        .confirmation-btn.cancel {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+        }
+
+        .confirmation-btn.collapse:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .confirmation-btn.confirm {
+            background: var(--danger-color);
+            color: white;
+        }
+
+        .confirmation-btn.confirm:hover {
+            background: #dc2626;
+        }
+
+        /* Edit Playlist Modal */
+        .edit-playlist-modal {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 2000;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .edit-playlist-container {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90%;
+            max-width: 400px;
+            background: var(--secondary-bg);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            padding: 24px;
+        }
+
+        .edit-playlist-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .edit-playlist-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .edit-playlist-input-container {
+            margin-bottom: 20px;
+        }
+
+        .edit-playlist-input {
+            width: 100%;
+            padding: 12px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+
+        .edit-playlist-input:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .edit-playlist-buttons {
+            display: flex;
+            justify-content: flex-end;
+            gap: 12px;
+        }
+
+        .edit-playlist-cancel-btn {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--text-primary);
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .edit-playlist-cancel-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .edit-playlist-save-btn {
+            background: var(--accent-color);
+            color: #0f0f0f;
+            padding: 10px 20px;
+            border-radius: 8px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .edit-playlist-save-btn:hover {
+            background: #65b8ff;
+        }
+
+        /* Responsive styles */
+        @media (min-width: 1024px) {
+            .sidebar {
+                transform: translateX(0);
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: var(--sidebar-width);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .search-bar {
+                margin: 0 16px;
+            }
+
+            .upload-buttons {
+                display: none;
+            }
+
+            .channels-grid {
+                grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            }
+        }
+
+        @media (max-width: 640px) {
+            .search-bar {
+                display: none;
+            }
+
+            .channels-grid {
+                grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+                gap: 12px;
+            }
+
+            .video-container {
+                width: 95%;
+            }
+
+            .confirmation-content {
+                width: 95%;
+            }
         }
     </style>
 </head>
-<body class="bg-black text-white min-h-screen">
-    <!-- Fixed Logo -->
-    <div class="fixed-logo">
-        <h1 class="text-red-600 font-bold text-3xl">MuratFlix</h1>
-    </div>
-
-    <!-- Hero Section - Minecraft Movie -->
-    <div class="relative h-[70vh] overflow-hidden">
-        <div class="absolute inset-0 hero-gradient z-10 flex items-end pb-20 px-10">
-            <div class="max-w-3xl">
-                <h1 class="hero-title text-5xl md:text-6xl font-bold mb-4">Bir Minecraft Filmi</h1>
-                <p class="text-lg md:text-xl mb-6">Dört uyumsuz Garrett "Çöp Adam" Garrison, Henry, Natalie ve Dawn gizemli bir geçitten aniden Overworld'e çekildiklerinde kendilerini sıradan sorunlarla mücadele ederken bulurlar. Hayal gücüyle gelişen tuhaf, kübik bir harikalar diyarına gelmişlerdir. Eve dönmek için bu dünyada ustalaşmaları (ayrıca onu Piglinler ve Zombiler gibi kötü şeylerden de korumaları) ve beklenmedik, uzman bir inşacı olan Steve'le büyülü bir maceraya atılmaları gerekecektir. Birlikte atılacakları macera, beşini de cesur olmaya ve her birini benzersiz bir şekilde yaratıcı kılan nitelikleriyle yeniden bağlantı kurmaya zorlayacak..</p>
-                <div class="flex space-x-4">
-                  
-                </div>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="logo-container">
+            <button class="menu-toggle" id="menu-toggle">
+                <i class="fas fa-bars"></i>
+            </button>
+            <div class="logo">
+                <svg viewBox="0 0 90 20" width="90" height="20" fill="#FF0000">
+                    <g>
+                        <path d="M27.9727 3.12324C27.6435 1.89323 26.6769 0.926623 25.4468 0.597366C23.2197 2.24288e-07 14.285 0 14.285 0C14.285 0 5.35042 2.24288e-07 3.12323 0.597366C1.89323 0.926623 0.926623 1.89323 0.597366 3.12324C2.24288e-07 5.35042 0 10 0 10C0 10 2.24288e-07 14.6496 0.597366 16.8768C0.926623 18.1068 1.89323 19.0734 3.12323 19.4026C5.35042 20 14.285 20 14.285 20C14.285 20 23.2197 20 25.4468 19.4026C26.6769 19.0734 27.6435 18.1068 27.9727 16.8768C28.5701 14.6496 28.5701 10 28.5701 10C28.5701 10 28.5701 5.35042 27.9727 3.12324Z" fill="red"></path>
+                        <path d="M11.4253 14.2854L18.8477 10.0004L11.4253 5.71533V14.2854Z" fill="white"></path>
+                    </g>
+                    <g>
+                        <path d="M39.455 10.0013C39.455 13.5486 36.5476 16.456 33.0003 16.456C29.453 16.456 26.5456 13.5486 26.5456 10.0013C26.5456 6.45396 29.453 3.54657 33.0003 3.54657C36.5476 3.54657 39.455 6.45396 39.455 10.0013ZM33.0003 5.81996C30.8264 5.81996 29.063 7.58336 29.063 9.75726C29.063 11.9312 30.8264 13.6946 33.0003 13.6946C35.1742 13.6946 36.9376 11.9312 36.9376 9.75726C36.9376 7.58336 35.1742 5.81996 33.0003 5.81996Z" fill="white"></path>
+                        <path d="M48.4547 10.0013C48.4547 13.5486 45.5473 16.456 42 16.456C38.4527 16.456 35.5453 13.5486 35.5453 10.0013C35.5453 6.45396 38.4527 3.54657 42 3.54657C45.5473 3.54657 48.4547 6.45396 48.4547 10.0013ZM42 5.81996C39.8261 5.81996 38.0627 7.58336 38.0627 9.75726C38.0627 11.9312 39.8261 13.6946 42 13.6946C44.1739 13.6946 45.9373 11.9312 45.9373 9.75726C45.9373 7.58336 44.1739 5.81996 42 5.81996Z" fill="white"></path>
+                        <path d="M57.4547 10.0013C57.4547 13.5486 54.5473 16.456 51 16.456C47.4527 16.456 44.5453 13.5486 44.5453 10.0013C44.5453 6.45396 47.4527 3.54657 51 3.54657C54.5473 3.54657 57.4547 6.45396 57.4547 10.0013ZM51 5.81996C48.8261 5.81996 47.0627 7.58336 47.0627 9.75726C47.0627 11.9312 48.8261 13.6946 51 13.6946C53.1739 13.6946 54.9373 11.9312 54.9373 9.75726C54.9373 7.58336 53.1739 5.81996 51 5.81996Z" fill="white"></path>
+                        <path d="M66.4547 10.0013C66.4547 13.5486 63.5473 16.456 60 16.456C56.4527 16.456 53.5453 13.5486 53.5453 10.0013C53.5453 6.45396 56.4527 3.54657 60 3.54657C63.5473 3.54657 66.4547 6.45396 66.4547 10.0013ZM60 5.81996C57.8261 5.81996 56.0627 7.58336 56.0627 9.75726C56.0627 11.9312 57.8261 13.6946 60 13.6946C62.1739 13.6946 63.9373 11.9312 63.9373 9.75726C63.9373 7.58336 62.1739 5.81996 60 5.81996Z" fill="white"></path>
+                        <path d="M75.4547 10.0013C75.4547 13.5486 72.5473 16.456 69 16.456C65.4527 16.456 62.5453 13.5486 62.5453 10.0013C62.5453 6.45396 65.4527 3.54657 69 3.54657C72.5473 3.54657 75.4547 6.45396 75.4547 10.0013ZM69 5.81996C66.8261 5.81996 65.0627 7.58336 65.0627 9.75726C65.0627 11.9312 66.8261 13.6946 69 13.6946C71.1739 13.6946 72.9373 11.9312 72.9373 9.75726C72.9373 7.58336 71.1739 5.81996 69 5.81996Z" fill="white"></path>
+                        <path d="M84.4547 10.0013C84.4547 13.5486 81.5473 16.456 78 16.456C74.4527 16.456 71.5453 13.5486 71.5453 10.0013C71.5453 6.45396 74.4527 3.54657 78 3.54657C81.5473 3.54657 84.4547 6.45396 84.4547 10.0013ZM78 5.81996C75.8261 5.81996 74.0627 7.58336 74.0627 9.75726C74.0627 11.9312 75.8261 13.6946 78 13.6946C80.1739 13.6946 81.9373 11.9312 81.9373 9.75726C81.9373 7.58336 80.1739 5.81996 78 5.81996Z" fill="white"></path>
+                    </g>
+                </svg>
             </div>
         </div>
-        <div class="absolute inset-0 z-0">
-            <img src="https://cdn.webtekno.com/media/cache/content_detail/article/156302/bir-minecraft-filmi-fragmani-konusu-oyuncu-kadrosu-vizyon-tarihi-1740715768.jpg" alt="Minecraft Movie" class="w-full h-full object-cover">
+        
+        <div class="search-bar">
+            <input type="text" class="search-input" id="search-input" placeholder="Kanal ara...">
+            <button class="search-button">
+                <i class="fas fa-search"></i>
+            </button>
         </div>
-    </div>
+        
+        <div class="upload-buttons">
+            <input type="file" id="m3u-file" accept=".m3u,.m3u8" style="display: none;">
+            <button class="upload-btn" onclick="document.getElementById('m3u-file').click()">
+                <i class="fas fa-upload"></i>
+                M3U Yükle
+            </button>
+            
+            <button class="upload-btn url-btn" id="open-url-btn">
+                <i class="fas fa-link"></i>
+                URL ile Aç
+            </button>
+        </div>
+    </header>
 
-    <!-- Search Container -->
-    <div id="searchContainer">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-2xl font-bold">Search</h2>
-            <button id="closeSearch" class="text-white hover:text-red-500 text-2xl">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="relative mb-6">
-            <input 
-                type="text" 
-                id="searchInput" 
-                placeholder="Search movies..." 
-                class="w-full bg-gray-800 text-white px-4 py-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500"
-                autocomplete="off"
-            >
-            <button id="clearSearch" class="absolute right-3 top-3 text-gray-400 hover:text-white">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div id="searchResults" class="overflow-y-auto h-[calc(100vh-150px)]">
-            <p class="text-gray-400 text-center py-10">Search for movies to see results</p>
+    <!-- Sidebar -->
+    <div class="sidebar" id="sidebar">
+        <div class="sidebar-section">
+            <h3 class="sidebar-header px-6 py-2 text-gray-400 uppercase text-xs font-medium">Playlistler</h3>
+            <div id="playlist-container">
+                <!-- Playlist items will be added here dynamically -->
+            </div>
         </div>
     </div>
 
     <!-- Main Content -->
-    <main class="pt-10 pb-20 px-4 md:px-10">
-        <!-- Loading State -->
-        <div id="loading" class="flex flex-col items-center justify-center h-64">
-            <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mb-4"></div>
-            <p class="text-white">Loading content...</p>
+    <div class="main-content">
+        <!-- Categories Container -->
+        <div id="categories-container">
+            <!-- Categories will be added here dynamically -->
         </div>
 
-        <!-- Content Sections -->
-        <div id="content" class="hidden">
-            <!-- Content will be dynamically inserted here -->
-        </div>
-    </main>
-
-    <!-- Video Player Modal -->
-    <div id="videoModal" class="fixed inset-0 bg-black bg-opacity-90 z-50 items-center justify-center p-4">
-        <div class="relative w-full max-w-6xl">
-            <button id="closeModal" class="absolute -top-12 right-0 text-white hover:text-red-500 text-3xl z-50">
-                <i class="fas fa-times"></i>
-            </button>
-            <div class="aspect-w-16 aspect-h-9 w-full">
-                <video id="videoPlayer" controls autoplay class="w-full h-full rounded-lg"></video>
-            </div>
-            <div class="mt-4 text-white">
-                <h2 id="videoTitle" class="text-2xl font-bold mb-2">Movie Title</h2>
-                <div class="flex space-x-4 mb-4">
-                    <span class="text-green-500 font-semibold">98% Match</span>
-                    <span>2023</span>
-                    <span class="border border-gray-400 px-1">HD</span>
-                </div>
-                <div class="flex space-x-4 mb-4">
-                    
-                </div>
-                <p id="videoDescription" class="text-gray-300">Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+        <!-- Empty State -->
+        <div class="empty-state" id="empty-state">
+            <i class="fas fa-tv"></i>
+            <h3>Playlist Yüklenmedi</h3>
+            <p>Favori kanallarınızı izlemek için bir M3U playlist dosyası yükleyin</p>
+            <div class="flex gap-4 justify-center">
+                <button class="upload-btn" onclick="document.getElementById('m3u-file').click()">
+                    <i class="fas fa-upload"></i>
+                    M3U Yükle
+                </button>
+                <button class="upload-btn url-btn" id="open-url-btn-empty">
+                    <i class="fas fa-link"></i>
+                    URL ile Aç
+                </button>
             </div>
         </div>
     </div>
 
+    <!-- Video Modal -->
+    <div class="video-modal" id="video-modal">
+        <div class="video-container">
+            <div class="video-header">
+                <h3 id="video-title" class="text-white font-medium"></h3>
+                <button class="close-btn" id="close-video">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <video id="video-player" controls></video>
+        </div>
+    </div>
+
+    <!-- URL Input Modal -->
+    <div class="url-modal" id="url-modal">
+        <div class="url-container">
+            <div class="url-header">
+                <h3 class="url-title">URL'den M3U Yükle</h3>
+                <button class="close-btn" id="close-url-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="url-input-container">
+                <input type="text" class="url-input" id="m3u-url" placeholder="M3U/M3U8 URL'si girin...">
+            </div>
+            
+            <div class="url-input-container">
+                <input type="text" class="url-input" id="playlist-name" placeholder="Playlist adı (isteğe bağlı)">
+            </div>
+            
+            <div class="url-buttons">
+                <button class="url-cancel-btn" id="cancel-url">İptal</button>
+                <button class="url-submit-btn" id="submit-url">Yükle</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Playlist Modal -->
+    <div class="edit-playlist-modal" id="edit-playlist-modal">
+        <div class="edit-playlist-container">
+            <div class="edit-playlist-header">
+                <h3 class="edit-playlist-title">Playlist Adını Düzenle</h3>
+                <button class="close-btn" id="close-edit-playlist-modal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="edit-playlist-input-container">
+                <input type="text" class="edit-playlist-input" id="edit-playlist-name" placeholder="Yeni playlist adı">
+            </div>
+            
+            <div class="edit-playlist-buttons">
+                <button class="edit-playlist-cancel-btn" id="cancel-edit-playlist">İptal</button>
+                <button class="edit-playlist-save-btn" id="save-playlist-name">Kaydet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirmation Dialog -->
+    <div class="confirmation-dialog" id="confirmation-dialog">
+        <div class="confirmation-content">
+            <h3 class="confirmation-title">Playlist Silme</h3>
+            <p class="confirmation-message" id="confirmation-message">Silmek istediğinize emin misiniz?</p>
+            <div class="confirmation-buttons">
+                <button class="confirmation-btn cancel" id="cancel-delete">Hayır</button>
+                <button class="confirmation-btn confirm" id="confirm-delete">Evet</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="toast" id="toast">
+        <i class="fas fa-check-circle"></i>
+        <div>
+            <h4 class="font-medium" id="toast-title">Başarılı</h4>
+            <p class="text-sm" id="toast-message">İşlem başarıyla tamamlandı</p>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+        <a href="http://www.instagram.com/kimbumuratyavuz" target="_blank">created by Murat Yavuz</a>
+    </div>
+
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const loadingElement = document.getElementById('loading');
-            const contentElement = document.getElementById('content');
-            const videoModal = document.getElementById('videoModal');
-            const videoPlayer = document.getElementById('videoPlayer');
-            const closeModal = document.getElementById('closeModal');
-            const searchBtn = document.getElementById('searchBtn');
-            const searchContainer = document.getElementById('searchContainer');
-            const closeSearch = document.getElementById('closeSearch');
-            const searchInput = document.getElementById('searchInput');
-            const clearSearch = document.getElementById('clearSearch');
-            const searchResults = document.getElementById('searchResults');
-            const videoTitle = document.getElementById('videoTitle');
-            const videoDescription = document.getElementById('videoDescription');
+        // DOM Elements
+        const sidebar = document.getElementById('sidebar');
+        const menuToggle = document.getElementById('menu-toggle');
+        const fileInput = document.getElementById('m3u-file');
+        const playlistContainer = document.getElementById('playlist-container');
+        const categoriesContainer = document.getElementById('categories-container');
+        const videoModal = document.getElementById('video-modal');
+        const videoPlayer = document.getElementById('video-player');
+        const videoTitle = document.getElementById('video-title');
+        const closeButton = document.getElementById('close-video');
+        const emptyState = document.getElementById('empty-state');
+        const searchInput = document.getElementById('search-input');
+        const toast = document.getElementById('toast');
+        const toastTitle = document.getElementById('toast-title');
+        const toastMessage = document.getElementById('toast-message');
+        const confirmationDialog = document.getElementById('confirmation-dialog');
+        const confirmationMessage = document.getElementById('confirmation-message');
+        const cancelDeleteBtn = document.getElementById('cancel-delete');
+        const confirmDeleteBtn = document.getElementById('confirm-delete');
+        const openUrlBtn = document.getElementById('open-url-btn');
+        const openUrlBtnEmpty = document.getElementById('open-url-btn-empty');
+        const urlModal = document.getElementById('url-modal');
+        const closeUrlModal = document.getElementById('close-url-modal');
+        const cancelUrlBtn = document.getElementById('cancel-url');
+        const submitUrlBtn = document.getElementById('submit-url');
+        const m3uUrlInput = document.getElementById('m3u-url');
+        const playlistNameInput = document.getElementById('playlist-name');
+        const editPlaylistModal = document.getElementById('edit-playlist-modal');
+        const editPlaylistNameInput = document.getElementById('edit-playlist-name');
+        const closeEditPlaylistModal = document.getElementById('close-edit-playlist-modal');
+        const cancelEditPlaylistBtn = document.getElementById('cancel-edit-playlist');
+        const savePlaylistNameBtn = document.getElementById('save-playlist-name');
+
+        // State variables
+        let currentPlaylist = null;
+        let playlistToDelete = null;
+        let playlistToEdit = null;
+        let hls = null;
+        let allChannels = [];
+        let filteredChannels = [];
+        let playlists = JSON.parse(localStorage.getItem('playlists')) || {};
+        let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+        let collapsedCategories = JSON.parse(localStorage.getItem('collapsedCategories')) || {};
+
+        // Initialize the app
+        function init() {
+            displayPlaylists();
+            setupEventListeners();
+            checkEmptyState();
             
-            // Global variables
-            let hls = null;
-            let allChannels = [];
-            let categories = {};
+            // On desktop, show sidebar by default
+            if (window.innerWidth >= 1024) {
+                sidebar.classList.add('open');
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Menu toggle
+            menuToggle.addEventListener('click', () => {
+                sidebar.classList.toggle('open');
+            });
+
+            // File input change
+            fileInput.addEventListener('change', handleFileUpload);
+
+            // Video modal close
+            closeButton.addEventListener('click', closePlayer);
+            videoModal.addEventListener('click', (e) => {
+                if (e.target === videoModal) closePlayer();
+            });
+
+            // URL modal
+            openUrlBtn.addEventListener('click', () => urlModal.style.display = 'block');
+            openUrlBtnEmpty.addEventListener('click', () => urlModal.style.display = 'block');
+            closeUrlModal.addEventListener('click', () => urlModal.style.display = 'none');
+            cancelUrlBtn.addEventListener('click', () => urlModal.style.display = 'none');
+            urlModal.addEventListener('click', (e) => {
+                if (e.target === urlModal) urlModal.style.display = 'none';
+            });
             
-            // Fetch data from the URL
-            fetch('https://raw.githubusercontent.com/kimbumuratyavuz/capcanli/refs/heads/main/film.m3u')
-                .then(response => response.text())
-                .then(data => {
-                    // Process the M3U data
-                    allChannels = parseM3U(data);
-                    
-                    // Group channels by category
-                    categories = groupByCategory(allChannels);
-                    
-                    // Render the content
-                    renderContent(categories);
-                    
-                    // Hide loading, show content
-                    loadingElement.classList.add('hidden');
-                    contentElement.classList.remove('hidden');
-                    
-                    // Add click event listeners to all movie cards
-                    document.querySelectorAll('.movie-card').forEach(card => {
-                        card.addEventListener('click', function() {
-                            const m3u8Url = this.querySelector('img').getAttribute('data-url');
-                            const title = this.querySelector('img').getAttribute('alt');
-                            playVideo(m3u8Url, title);
-                        });
-                    });
+            submitUrlBtn.addEventListener('click', loadFromUrl);
+
+            // Edit playlist modal
+            closeEditPlaylistModal.addEventListener('click', () => editPlaylistModal.style.display = 'none');
+            cancelEditPlaylistBtn.addEventListener('click', () => editPlaylistModal.style.display = 'none');
+            editPlaylistModal.addEventListener('click', (e) => {
+                if (e.target === editPlaylistModal) editPlaylistModal.style.display = 'none';
+            });
+            
+            savePlaylistNameBtn.addEventListener('click', saveEditedPlaylistName);
+
+            // Keyboard events
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && videoModal.style.display === 'block') {
+                    closePlayer();
+                }
+                if (e.key === 'Escape' && urlModal.style.display === 'block') {
+                    urlModal.style.display = 'none';
+                }
+                if (e.key === 'Escape' && editPlaylistModal.style.display === 'block') {
+                    editPlaylistModal.style.display = 'none';
+                }
+            });
+
+            // Search functionality
+            searchInput.addEventListener('input', () => {
+                const searchTerm = searchInput.value.toLowerCase();
+                if (searchTerm === '') {
+                    filteredChannels = [...allChannels];
+                } else {
+                    filteredChannels = allChannels.filter(channel => 
+                        channel.title.toLowerCase().includes(searchTerm) || 
+                        (channel.group && channel.group.toLowerCase().includes(searchTerm))
+                    );
+                }
+                displayChannelsByCategory(filteredChannels);
+            });
+
+            // Confirmation dialog buttons
+            cancelDeleteBtn.addEventListener('click', () => {
+                confirmationDialog.style.display = 'none';
+            });
+
+            confirmDeleteBtn.addEventListener('click', () => {
+                if (playlistToDelete) {
+                    deletePlaylist(playlistToDelete);
+                }
+                confirmationDialog.style.display = 'none';
+                playlistToDelete = null;
+            });
+        }
+
+        // Load M3U from URL
+        function loadFromUrl() {
+            const url = m3uUrlInput.value.trim();
+            const name = playlistNameInput.value.trim() || `URL Playlist - ${new Date().toLocaleDateString()}`;
+            
+            if (!url) {
+                showToast('Hata', 'Lütfen geçerli bir URL girin', 'error');
+                return;
+            }
+            
+            // Check if URL ends with .m3u or .m3u8
+            if (!url.toLowerCase().endsWith('.m3u') && !url.toLowerCase().endsWith('.m3u8')) {
+                showToast('Uyarı', 'URL .m3u veya .m3u8 uzantılı olmalıdır', 'warning');
+                return;
+            }
+            
+            submitUrlBtn.disabled = true;
+            submitUrlBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Yükleniyor...';
+            
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    return response.text();
+                })
+                .then(content => {
+                    try {
+                        const channels = parseM3U(content);
+                        savePlaylist(name, channels);
+                        urlModal.style.display = 'none';
+                        m3uUrlInput.value = '';
+                        playlistNameInput.value = '';
+                    } catch (error) {
+                        console.error('M3U dosyası ayrıştırılırken hata:', error);
+                        showToast('Hata', 'M3U dosyası ayrıştırılamadı', 'error');
+                    }
                 })
                 .catch(error => {
-                    console.error('Error fetching data:', error);
-                    loadingElement.innerHTML = `
-                        <div class="bg-red-900 text-white p-4 rounded-lg">
-                            <p class="font-bold">Error loading content</p>
-                            <p>${error.message}</p>
-                        </div>
-                    `;
+                    console.error('URL yüklenirken hata:', error);
+                    showToast('Hata', 'URL yüklenirken hata oluştu', 'error');
+                })
+                .finally(() => {
+                    submitUrlBtn.disabled = false;
+                    submitUrlBtn.innerHTML = 'Yükle';
                 });
-            
-            // Parse M3U file content
-            function parseM3U(content) {
-                const lines = content.split('\n');
-                const channels = [];
-                let currentChannel = {};
-                
-                for (const line of lines) {
-                    if (line.startsWith('#EXTINF')) {
-                        // Extract info from EXTINF line
-                        const info = line.split(',')[1];
-                        const groupMatch = line.match(/group-title="([^"]+)"/);
-                        const logoMatch = line.match(/tvg-logo="([^"]+)"/);
-                        
-                        currentChannel = {
-                            name: info.trim(),
-                            group: groupMatch ? groupMatch[1] : 'Filmler',
-                            logo: logoMatch ? logoMatch[1] : 'https://via.placeholder.com/200x300?text=No+Image',
-                            year: Math.floor(Math.random() * 20) + 2000, // Random year for demo
-                            rating: (Math.random() * 3 + 7).toFixed(1) // Random rating 7-10
-                        };
-                    } else if (line.startsWith('http')) {
-                        // This is the URL line
-                        currentChannel.url = line.trim();
-                        channels.push(currentChannel);
-                        currentChannel = {};
+        }
+
+        // Handle file upload
+        function handleFileUpload(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const content = e.target.result;
+                    const channels = parseM3U(content);
+                    
+                    // Get playlist name from file name (without extension)
+                    let playlistName = file.name.replace(/\.[^/.]+$/, "");
+                    
+                    // Check if playlist already exists
+                    if (playlists[playlistName]) {
+                        // Ask user if they want to overwrite
+                        showDeleteConfirmation(playlistName, () => {
+                            savePlaylist(playlistName, channels);
+                        }, () => {
+                            // User canceled, do nothing
+                        });
+                    } else {
+                        savePlaylist(playlistName, channels);
                     }
+                } catch (error) {
+                    console.error('M3U dosyası ayrıştırılırken hata:', error);
+                    showToast('Hata', 'M3U dosyası ayrıştırılamadı', 'error');
                 }
+            };
+            reader.onerror = () => {
+                showToast('Hata', 'Dosya okunurken hata oluştu', 'error');
+            };
+            reader.readAsText(file);
+            
+            // Reset file input
+            e.target.value = '';
+        }
+
+        // Save playlist to storage
+        function savePlaylist(name, channels) {
+            playlists[name] = channels;
+            localStorage.setItem('playlists', JSON.stringify(playlists));
+            displayPlaylists();
+            loadPlaylist(name);
+            showToast('Başarılı', `"${name}" playlisti yüklendi (${channels.length} kanal)`, 'success');
+        }
+
+        // Display all playlists in the side menu
+        function displayPlaylists() {
+            playlistContainer.innerHTML = '';
+            
+            if (Object.keys(playlists).length === 0) {
+                playlistContainer.innerHTML = `
+                    <div class="text-center py-8 text-gray-400">
+                        <i class="fas fa-folder-open text-2xl mb-2"></i>
+                        <p>Playlist bulunamadı</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            // Sort favorites first
+            const sortedPlaylists = Object.keys(playlists).sort((a, b) => {
+                const aIsFavorite = favorites.includes(a);
+                const bIsFavorite = favorites.includes(b);
                 
-                return channels;
+                if (aIsFavorite && !bIsFavorite) return -1;
+                if (!aIsFavorite && bIsFavorite) return 1;
+                return a.localeCompare(b);
+            });
+            
+            sortedPlaylists.forEach(name => {
+                const playlist = playlists[name];
+                const isActive = currentPlaylist === name;
+                
+                const item = document.createElement('div');
+                item.className = `sidebar-item ${isActive ? 'active' : ''}`;
+                item.innerHTML = `
+                    <i class="fas fa-list"></i>
+                    <span class="sidebar-item-text">${name}</span>
+                    <span class="sidebar-item-count">${playlist.length}</span>
+                    <button class="edit-btn" data-playlist="${name}">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="delete-btn" data-playlist="${name}">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                
+                item.addEventListener('click', () => loadPlaylist(name));
+                
+                // Add delete button event
+                const deleteBtn = item.querySelector('.delete-btn');
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showDeleteConfirmation(name);
+                });
+                
+                // Add edit button event
+                const editBtn = item.querySelector('.edit-btn');
+                editBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    showEditPlaylistModal(name);
+                });
+                
+                playlistContainer.appendChild(item);
+            });
+        }
+
+        // Show edit playlist modal
+        function showEditPlaylistModal(name) {
+            playlistToEdit = name;
+            editPlaylistNameInput.value = name;
+            editPlaylistModal.style.display = 'block';
+        }
+
+        // Save edited playlist name
+        function saveEditedPlaylistName() {
+            const newName = editPlaylistNameInput.value.trim();
+            
+            if (!newName) {
+                showToast('Hata', 'Playlist adı boş olamaz', 'error');
+                return;
+            }
+            
+            if (newName === playlistToEdit) {
+                editPlaylistModal.style.display = 'none';
+                return;
+            }
+            
+            // Check if new name already exists
+            if (playlists[newName]) {
+                showToast('Hata', 'Bu isimde bir playlist zaten var', 'error');
+                return;
+            }
+            
+            // Rename the playlist
+            const channels = playlists[playlistToEdit];
+            delete playlists[playlistToEdit];
+            playlists[newName] = channels;
+            
+            // Update favorites if needed
+            const favIndex = favorites.indexOf(playlistToEdit);
+            if (favIndex !== -1) {
+                favorites[favIndex] = newName;
+                localStorage.setItem('favorites', JSON.stringify(favorites));
+            }
+            
+            // Update current playlist if needed
+            if (currentPlaylist === playlistToEdit) {
+                currentPlaylist = newName;
+            }
+            
+            localStorage.setItem('playlists', JSON.stringify(playlists));
+            displayPlaylists();
+            editPlaylistModal.style.display = 'none';
+            playlistToEdit = null;
+            
+            showToast('Başarılı', 'Playlist adı güncellendi', 'success');
+        }
+
+        // Show delete confirmation dialog
+        function showDeleteConfirmation(name, onConfirm = null, onCancel = null) {
+            playlistToDelete = name;
+            confirmationMessage.textContent = `"${name}" playlistini silmek istediğinize emin misiniz?`;
+            confirmationDialog.style.display = 'flex';
+            
+            // Store callbacks
+            confirmDeleteBtn.onclick = () => {
+                if (onConfirm) onConfirm();
+                deletePlaylist(name);
+                confirmationDialog.style.display = 'none';
+                playlistToDelete = null;
+            };
+            
+            cancelDeleteBtn.onclick = () => {
+                if (onCancel) onCancel();
+                confirmationDialog.style.display = 'none';
+                playlistToDelete = null;
+            };
+        }
+
+        // Delete playlist
+        function deletePlaylist(name) {
+            delete playlists[name];
+            localStorage.setItem('playlists', JSON.stringify(playlists));
+            
+            // Remove from favorites if it was there
+            const favIndex = favorites.indexOf(name);
+            if (favIndex !== -1) {
+                favorites.splice(favIndex, 1);
+                localStorage.setItem('favorites', JSON.stringify(favorites));
+            }
+            
+            displayPlaylists();
+            
+            if (currentPlaylist === name) {
+                currentPlaylist = null;
+                allChannels = [];
+                filteredChannels = [];
+                categoriesContainer.innerHTML = '';
+                checkEmptyState();
+            }
+            
+            showToast('Playlist silindi', `"${name}" playlisti silindi`, 'warning');
+        }
+
+        // Load playlist channels
+        function loadPlaylist(name) {
+            if (!playlists[name]) return;
+            
+            currentPlaylist = name;
+            allChannels = [...playlists[name]];
+            filteredChannels = [...allChannels];
+            
+            displayChannelsByCategory(filteredChannels);
+            
+            // Highlight active playlist in sidebar
+            const playlistItems = document.querySelectorAll('.sidebar-item');
+            playlistItems.forEach(item => {
+                item.classList.remove('active');
+                if (item.querySelector('.sidebar-item-text').textContent === name) {
+                    item.classList.add('active');
+                }
+            });
+            
+            checkEmptyState();
+            sidebar.classList.remove('open');
+        }
+
+        // Display channels grouped by category
+        function displayChannelsByCategory(channels) {
+            if (!channels || channels.length === 0) {
+                categoriesContainer.innerHTML = `
+                    <div class="col-span-full text-center py-12 text-gray-400">
+                        <i class="fas fa-tv text-3xl mb-4"></i>
+                        <p>Kanal bulunamadı</p>
+                    </div>
+                `;
+                return;
             }
             
             // Group channels by category
-            function groupByCategory(channels) {
-                const categories = {};
-                
-                channels.forEach(channel => {
-                    if (!categories[channel.group]) {
-                        categories[channel.group] = [];
-                    }
-                    categories[channel.group].push(channel);
-                });
-                
-                return categories;
-            }
+            const categories = {};
+            channels.forEach(channel => {
+                const category = channel.group || 'Diğer Kanallar';
+                if (!categories[category]) {
+                    categories[category] = [];
+                }
+                categories[category].push(channel);
+            });
             
-            // Render the content
-            function renderContent(categories) {
-                let html = '';
-                
-                
-                // Other categories
-                for (const [category, channels] of Object.entries(categories)) {
-                    html += `
-                        <section class="mb-16">
-                            <h2 class="category-title text-xl md:text-2xl font-bold mb-6 px-2">${category}</h2>
-                            <div class="relative">
-                                <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 px-2">
-                                    ${channels.map(channel => `
-                                        <div class="movie-card relative rounded-lg overflow-hidden">
-                                            <img 
-                                                src="${channel.logo}" 
-                                                alt="${channel.name}" 
-                                                class="w-full h-auto object-cover rounded-lg"
-                                                data-url="${channel.url}"
-                                            >
-                                            <div class="movie-info absolute inset-0 bg-black bg-opacity-70 flex flex-col justify-end p-3">
-                                                <div class="flex items-center mb-2">
-                                                    <span class="text-green-500 text-sm font-bold mr-2">${channel.rating}</span>
-                                                    <span class="text-gray-300 text-xs">${channel.year}</span>
-                                                </div>
-                                                <p class="text-white text-sm font-semibold">${channel.name}</p>
-                                            </div>
-                                        </div>
-                                    `).join('')}
-                                </div>
-                            </div>
-                        </section>
-                    `;
-                }
-                
-                contentElement.innerHTML = html;
-            }
+            // Sort categories alphabetically
+            const sortedCategories = Object.keys(categories).sort((a, b) => {
+                if (a === 'Diğer Kanallar') return 1;
+                if (b === 'Diğer Kanallar') return -1;
+                return a.localeCompare(b);
+            });
             
-            // Play video function
-            function playVideo(url, title = 'Movie') {
-                console.log('Attempting to play video:', url);
-                
-                // Set video info
-                videoTitle.textContent = title;
-                videoDescription.textContent = ` ${title} şimdi Muratflix'de İyi seyirler..`;
-                
-                // Clean up previous HLS instance if exists
-                if (hls) {
-                    hls.destroy();
-                }
-                
-                // Show modal
-                videoModal.classList.add('modal-visible');
-                document.body.style.overflow = 'hidden';
-                
-                // Check if URL is M3U8
-                if (url.includes('.m3u8')) {
-                    if (Hls.isSupported()) {
-                        hls = new Hls();
-                        hls.loadSource(url);
-                        hls.attachMedia(videoPlayer);
-                        hls.on(Hls.Events.MANIFEST_PARSED, function() {
-                            videoPlayer.play().catch(e => {
-                                console.error('Autoplay failed:', e);
-                                // Show play button to user
-                                videoPlayer.controls = true;
-                            });
-                        });
-                        
-                        // Handle errors
-                        hls.on(Hls.Events.ERROR, function(event, data) {
-                            if (data.fatal) {
-                                switch(data.type) {
-                                    case Hls.ErrorTypes.NETWORK_ERROR:
-                                        console.error('Network error');
-                                        break;
-                                    case Hls.ErrorTypes.MEDIA_ERROR:
-                                        console.error('Media error');
-                                        hls.recoverMediaError();
-                                        break;
-                                    default:
-                                        console.error('Unrecoverable error');
-                                        break;
-                                }
-                            }
-                        });
-                    } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
-                        // For Safari
-                        videoPlayer.src = url;
-                        videoPlayer.addEventListener('loadedmetadata', function() {
-                            videoPlayer.play().catch(e => {
-                                console.error('Autoplay failed:', e);
-                                videoPlayer.controls = true;
-                            });
-                        });
-                    }
-                } else {
-                    // For direct video files
-                    videoPlayer.src = url;
-                    videoPlayer.play().catch(e => {
-                        console.error('Autoplay failed:', e);
-                        videoPlayer.controls = true;
-                    });
-                }
-            }
+            categoriesContainer.innerHTML = '';
             
-            // Close modal function
-            function closeVideoModal() {
-                videoModal.classList.remove('modal-visible');
-                document.body.style.overflow = 'auto';
+            sortedCategories.forEach(category => {
+                const categoryChannels = categories[category];
+                const isCollapsed = collapsedCategories[category] || false;
                 
-                // Pause and reset video
-                if (videoPlayer) {
-                    videoPlayer.pause();
-                    videoPlayer.src = '';
-                }
+                const categoryElement = document.createElement('div');
+                categoryElement.className = 'category-container';
                 
-                // Destroy HLS instance if exists
-                if (hls) {
-                    hls.destroy();
-                    hls = null;
-                }
-            }
-            
-            // Search functionality
-            function performSearch(query) {
-                if (!query.trim()) {
-                    searchResults.innerHTML = '<p class="text-gray-400 text-center py-10">Search for movies to see results</p>';
-                    return;
-                }
-                
-                const lowerQuery = query.toLowerCase();
-                const results = allChannels.filter(channel => 
-                    channel.name.toLowerCase().includes(lowerQuery)
-                );
-                
-                if (results.length === 0) {
-                    searchResults.innerHTML = '<p class="text-gray-400 text-center py-10">No results found</p>';
-                    return;
-                }
-                
-                let html = results.map(channel => `
-                    <div 
-                        class="search-result-item p-3 rounded-lg cursor-pointer flex items-center space-x-3 mb-2"
-                        data-url="${channel.url}"
-                        data-title="${channel.name}"
-                    >
-                        <img 
-                            src="${channel.logo}" 
-                            alt="${channel.name}"
-                            class="w-16 h-16 object-cover rounded"
-                        >
-                        <div>
-                            <h3 class="font-medium">${channel.name}</h3>
-                            <div class="flex items-center">
-                                <span class="text-green-500 text-xs font-bold mr-2">${channel.rating}</span>
-                                <span class="text-gray-400 text-xs">${channel.year}</span>
-                            </div>
+                // Create category header
+                const header = document.createElement('div');
+                header.className = 'category-header';
+                header.innerHTML = `
+                    <div class="category-title">
+                        <div class="category-icon">
+                            <i class="fas fa-folder"></i>
                         </div>
+                        <span>${category}</span>
                     </div>
-                `).join('');
+                    <div class="flex items-center gap-4">
+                        <span class="category-count">${categoryChannels.length} kanal</span>
+                        <i class="fas fa-chevron-down category-toggle ${isCollapsed ? 'collapsed' : ''}"></i>
+                    </div>
+                `;
                 
-                searchResults.innerHTML = html;
+                // Create channels grid
+                const grid = document.createElement('div');
+                grid.className = 'channels-grid';
+                grid.style.display = isCollapsed ? 'none' : 'grid';
                 
-                // Add click event to search results
-                document.querySelectorAll('.search-result-item').forEach(item => {
-                    item.addEventListener('click', function() {
-                        const url = this.getAttribute('data-url');
-                        const title = this.getAttribute('data-title');
-                        closeSearchContainer();
-                        playVideo(url, title);
+                categoryChannels.forEach(channel => {
+                    const isFavorite = favorites.includes(channel.url);
+                    const card = createChannelCard(channel, isFavorite);
+                    grid.appendChild(card);
+                });
+                
+                // Toggle category collapse/expand
+                header.addEventListener('click', () => {
+                    const toggleIcon = header.querySelector('.category-toggle');
+                    const isNowCollapsed = grid.style.display === 'none';
+                    
+                    grid.style.display = isNowCollapsed ? 'grid' : 'none';
+                    toggleIcon.classList.toggle('collapsed');
+                    
+                    // Save collapsed state
+                    collapsedCategories[category] = !isNowCollapsed;
+                    localStorage.setItem('collapsedCategories', JSON.stringify(collapsedCategories));
+                });
+                
+                categoryElement.appendChild(header);
+                categoryElement.appendChild(grid);
+                categoriesContainer.appendChild(categoryElement);
+            });
+        }
+
+        // Create channel card element
+        function createChannelCard(channel, isFavorite = false) {
+            const card = document.createElement('div');
+            card.className = 'channel-card';
+            
+            // Get first letter for avatar
+            const firstLetter = channel.title.charAt(0).toUpperCase();
+            
+            card.innerHTML = `
+                <div class="channel-thumbnail">
+                    <img src="${channel.logo}" alt="${channel.title}" 
+                         onerror="this.src='https://via.placeholder.com/300x169/272727/555?text=No+Logo'">
+                    ${isFavorite ? `<div class="absolute top-2 right-2 text-yellow-400"><i class="fas fa-star"></i></div>` : ''}
+                </div>
+                <div class="channel-info">
+                    <div class="channel-avatar">${firstLetter}</div>
+                    <div class="channel-details">
+                        <h3 class="channel-title">${channel.title}</h3>
+                        ${channel.group ? `<span class="channel-group">${channel.group}</span>` : ''}
+                    </div>
+                </div>
+            `;
+            
+            card.addEventListener('click', () => playChannel(channel));
+            return card;
+        }
+
+        // Parse M3U file content
+        function parseM3U(content) {
+            const lines = content.split('\n');
+            const channels = [];
+            let currentChannel = null;
+            
+            for (let i = 0; i < lines.length; i++) {
+                const line = lines[i].trim();
+                
+                if (line.startsWith('#EXTINF:')) {
+                    // Parse EXTINF line
+                    const durationMatch = line.match(/:-?\d+/);
+                    const titleMatch = line.match(/,(.+)$/);
+                    const title = titleMatch ? titleMatch[1].trim() : 'İsimsiz Kanal';
+                    
+                    // Extract attributes
+                    const attributes = {};
+                    const attributeMatches = line.matchAll(/([a-zA-Z0-9-]+)="([^"]*)"/g);
+                    for (const match of attributeMatches) {
+                        attributes[match[1]] = match[2];
+                    }
+                    
+                    currentChannel = {
+                        title: title,
+                        logo: attributes['tvg-logo'] || '',
+                        group: attributes['group-title'] || '',
+                        duration: durationMatch ? parseInt(durationMatch[0].substring(1)) : -1,
+                        attributes: attributes
+                    };
+                } else if (line && !line.startsWith('#') && currentChannel) {
+                    // This is the URL line
+                    currentChannel.url = line;
+                    channels.push({...currentChannel});
+                    currentChannel = null;
+                }
+            }
+            
+            return channels;
+        }
+
+        // Play channel
+        function playChannel(channel) {
+            if (!channel.url) {
+                showToast('Hata', 'Bu kanal için yayın URLsi bulunamadı', 'error');
+                return;
+            }
+            
+            videoModal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            videoTitle.textContent = channel.title;
+            
+            // Destroy previous HLS instance if exists
+            if (hls) {
+                hls.destroy();
+            }
+            
+            if (Hls.isSupported()) {
+                hls = new Hls();
+                hls.loadSource(channel.url);
+                hls.attachMedia(videoPlayer);
+                
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    videoPlayer.play().catch(e => {
+                        console.error('Otomatik oynatma hatası:', e);
+                        showToast('Bilgi', 'Oynatmak için play tuşuna basın', 'warning');
                     });
                 });
-            }
-            
-            // Open search container
-            function openSearchContainer() {
-                searchContainer.classList.add('visible');
-                document.body.style.overflow = 'hidden';
-                searchInput.focus();
-            }
-            
-            // Close search container
-            function closeSearchContainer() {
-                searchContainer.classList.remove('visible');
-                document.body.style.overflow = 'auto';
-                searchInput.value = '';
-                searchResults.innerHTML = '<p class="text-gray-400 text-center py-10">Search for movies to see results</p>';
-            }
-            
-            // Event listeners
-            closeSearch.addEventListener('click', closeSearchContainer);
-            clearSearch.addEventListener('click', () => {
-                searchInput.value = '';
-                searchInput.focus();
-                performSearch('');
-            });
-            
-            searchInput.addEventListener('input', (e) => {
-                performSearch(e.target.value);
-            });
-            
-            searchInput.addEventListener('keydown', (e) => {
-                if (e.key === 'Escape') {
-                    closeSearchContainer();
-                }
-            });
-            
-            // Close modal when clicking the close button
-            closeModal.addEventListener('click', closeVideoModal);
-            
-            // Close modal when clicking outside
-            videoModal.addEventListener('click', function(e) {
-                if (e.target === videoModal) {
-                    closeVideoModal();
-                }
-            });
-            
-            // Close modal with ESC key
-            document.addEventListener('keydown', function(e) {
-                if (e.key === 'Escape') {
-                    if (videoModal.classList.contains('modal-visible')) {
-                        closeVideoModal();
-                    } else if (searchContainer.classList.contains('visible')) {
-                        closeSearchContainer();
+                
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.fatal) {
+                        switch(data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                showToast('Hata', 'Ağ hatası - yeniden deneniyor', 'error');
+                                hls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                showToast('Hata', 'Medya hatası - yeniden deneniyor', 'error');
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                showToast('Hata', 'Kritik hata - düzeltilemedi', 'error');
+                                closePlayer();
+                                break;
+                        }
                     }
-                }
-            });
-        });
+                });
+            } else if (videoPlayer.canPlayType('application/vnd.apple.mpegurl')) {
+                // For Safari
+                videoPlayer.src = channel.url;
+                videoPlayer.addEventListener('loadedmetadata', () => {
+                    videoPlayer.play().catch(e => {
+                        console.error('Otomatik oynatma hatası:', e);
+                        showToast('Bilgi', 'Oynatmak için play tuşuna basın', 'warning');
+                    });
+                });
+            } else {
+                showToast('Hata', 'Tarayıcınız bu yayın formatını desteklemiyor', 'error');
+                closePlayer();
+            }
+        }
+
+        // Close video player
+        function closePlayer() {
+            videoModal.style.display = 'none';
+            document.body.style.overflow = '';
+            
+            if (hls) {
+                hls.destroy();
+                hls = null;
+            }
+            
+            videoPlayer.pause();
+            videoPlayer.src = '';
+        }
+
+        // Check and display empty state if needed
+        function checkEmptyState() {
+            if (Object.keys(playlists).length === 0 || !currentPlaylist) {
+                emptyState.style.display = 'block';
+                categoriesContainer.innerHTML = '';
+            } else {
+                emptyState.style.display = 'none';
+            }
+        }
+
+        // Show toast notification
+        function showToast(title, message, type = 'success') {
+            // Set toast content and style
+            toast.className = `toast ${type}`;
+            toastTitle.textContent = title;
+            toastMessage.textContent = message;
+            
+            // Set icon based on type
+            const icon = toast.querySelector('i');
+            switch(type) {
+                case 'success':
+                    icon.className = 'fas fa-check-circle';
+                    break;
+                case 'error':
+                    icon.className = 'fas fa-exclamation-circle';
+                    break;
+                case 'warning':
+                    icon.className = 'fas fa-exclamation-triangle';
+                    break;
+            }
+            
+            // Show toast
+            toast.classList.add('show');
+            
+            // Hide after 5 seconds
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 5000);
+        }
+
+        // Initialize the app
+        window.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
