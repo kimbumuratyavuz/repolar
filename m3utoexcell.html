@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M3U to Excel Converter</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        .dropzone {
+            border: 2px dashed #3b82f6;
+            border-radius: 0.5rem;
+            transition: all 0.3s ease;
+        }
+        .dropzone:hover {
+            border-color: #2563eb;
+            background-color: #f8fafc;
+        }
+        .dropzone.active {
+            border-color: #1d4ed8;
+            background-color: #e0e7ff;
+        }
+        .progress-bar {
+            height: 6px;
+            background-color: #e0e7ff;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .progress-fill {
+            height: 100%;
+            background-color: #3b82f6;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        #resultTable {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <div class="text-center mb-8">
+            <h1 class="text-3xl font-bold text-blue-600 mb-2">
+                <i class="fas fa-file-audio mr-2"></i>M3U to Excel Converter
+            </h1>
+            <p class="text-gray-600">Convert your M3U playlist files to Excel spreadsheets with ease</p>
+        </div>
+
+        <div class="bg-white rounded-xl shadow-md p-6 mb-8">
+            <div class="flex flex-col md:flex-row gap-6">
+                <div class="flex-1">
+                    <div id="dropzone" class="dropzone p-8 text-center cursor-pointer">
+                        <div class="flex flex-col items-center justify-center">
+                            <i class="fas fa-cloud-upload-alt text-4xl text-blue-500 mb-4"></i>
+                            <h3 class="text-lg font-medium text-gray-700 mb-2">Drag & Drop your M3U file here</h3>
+                            <p class="text-gray-500 text-sm mb-4">or click to browse files</p>
+                            <input type="file" id="fileInput" accept=".m3u,.m3u8" class="hidden">
+                            <button id="browseBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition">
+                                <i class="fas fa-folder-open mr-2"></i>Select File
+                            </button>
+                        </div>
+                    </div>
+                    <div class="mt-4">
+                        <div class="flex justify-between text-sm text-gray-600 mb-1">
+                            <span>File: <span id="fileName">None selected</span></span>
+                            <span id="fileSize">0 KB</span>
+                        </div>
+                        <div class="progress-bar">
+                            <div id="progressFill" class="progress-fill"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex-1 flex flex-col justify-center">
+                    <div class="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-4">
+                        <h4 class="font-medium text-blue-800 mb-2">
+                            <i class="fas fa-info-circle mr-2"></i>How it works
+                        </h4>
+                        <ul class="text-sm text-blue-700 space-y-1">
+                            <li><i class="fas fa-check-circle mr-2 text-blue-500"></i>Upload your M3U playlist file</li>
+                            <li><i class="fas fa-check-circle mr-2 text-blue-500"></i>We'll parse the channels and metadata</li>
+                            <li><i class="fas fa-check-circle mr-2 text-blue-500"></i>Download as Excel spreadsheet</li>
+                        </ul>
+                    </div>
+
+                    <button id="convertBtn" disabled class="bg-green-500 hover:bg-green-600 text-white px-4 py-3 rounded-lg font-medium transition disabled:bg-gray-300 disabled:cursor-not-allowed">
+                        <i class="fas fa-file-excel mr-2"></i>Convert to Excel
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="resultSection" class="hidden bg-white rounded-xl shadow-md p-6 fade-in">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-800">
+                    <i class="fas fa-table mr-2 text-blue-500"></i>Converted Data
+                </h2>
+                <button id="downloadBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg text-sm transition">
+                    <i class="fas fa-download mr-2"></i>Download Excel
+                </button>
+            </div>
+            
+            <div id="resultTable" class="border rounded-lg overflow-hidden">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">#</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Channel Name</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">URL</th>
+                            <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Group</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="bg-white divide-y divide-gray-200">
+                        <!-- Data will be inserted here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div id="errorAlert" class="hidden fixed bottom-4 right-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded-lg shadow-lg max-w-sm fade-in">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-circle mr-3 text-red-500"></i>
+                <div>
+                    <p id="errorMessage" class="font-medium">Error message here</p>
+                </div>
+                <button id="closeErrorBtn" class="ml-4 text-red-700 hover:text-red-900">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM elements
+            const fileInput = document.getElementById('fileInput');
+            const browseBtn = document.getElementById('browseBtn');
+            const dropzone = document.getElementById('dropzone');
+            const fileName = document.getElementById('fileName');
+            const fileSize = document.getElementById('fileSize');
+            const progressFill = document.getElementById('progressFill');
+            const convertBtn = document.getElementById('convertBtn');
+            const resultSection = document.getElementById('resultSection');
+            const tableBody = document.getElementById('tableBody');
+            const downloadBtn = document.getElementById('downloadBtn');
+            const errorAlert = document.getElementById('errorAlert');
+            const errorMessage = document.getElementById('errorMessage');
+            const closeErrorBtn = document.getElementById('closeErrorBtn');
+            
+            let file = null;
+            let parsedData = [];
+
+            // Event listeners
+            browseBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', handleFileSelect);
+            dropzone.addEventListener('dragover', handleDragOver);
+            dropzone.addEventListener('dragleave', handleDragLeave);
+            dropzone.addEventListener('drop', handleDrop);
+            convertBtn.addEventListener('click', convertToExcel);
+            downloadBtn.addEventListener('click', downloadExcel);
+            closeErrorBtn.addEventListener('click', () => errorAlert.classList.add('hidden'));
+
+            // File selection handler
+            function handleFileSelect(e) {
+                file = e.target.files[0] || (e.dataTransfer && e.dataTransfer.files[0]);
+                if (file) {
+                    validateAndProcessFile(file);
+                }
+            }
+
+            // Drag and drop handlers
+            function handleDragOver(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.add('active');
+            }
+
+            function handleDragLeave(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.remove('active');
+            }
+
+            function handleDrop(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                dropzone.classList.remove('active');
+                
+                file = e.dataTransfer.files[0];
+                if (file) {
+                    validateAndProcessFile(file);
+                }
+            }
+
+            // Validate and process the selected file
+            function validateAndProcessFile(file) {
+                const validExtensions = ['.m3u', '.m3u8'];
+                const fileExt = file.name.substring(file.name.lastIndexOf('.')).toLowerCase();
+                
+                if (!validExtensions.includes(fileExt)) {
+                    showError('Please select a valid M3U file (.m3u or .m3u8)');
+                    return;
+                }
+
+                // Update UI with file info
+                fileName.textContent = file.name;
+                fileSize.textContent = formatFileSize(file.size);
+                progressFill.style.width = '100%';
+                convertBtn.disabled = false;
+            }
+
+            // Convert M3U to Excel data
+            function convertToExcel() {
+                if (!file) {
+                    showError('No file selected');
+                    return;
+                }
+
+                convertBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Processing...';
+                convertBtn.disabled = true;
+
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const content = e.target.result;
+                        parsedData = parseM3U(content);
+                        
+                        if (parsedData.length === 0) {
+                            showError('No valid channels found in the M3U file');
+                            convertBtn.innerHTML = '<i class="fas fa-file-excel mr-2"></i>Convert to Excel';
+                            convertBtn.disabled = false;
+                            return;
+                        }
+
+                        // Display the data in the table
+                        renderTable(parsedData);
+                        
+                        // Show the result section
+                        resultSection.classList.remove('hidden');
+                        
+                        convertBtn.innerHTML = '<i class="fas fa-check-circle mr-2"></i>Conversion Complete';
+                        setTimeout(() => {
+                            convertBtn.innerHTML = '<i class="fas fa-file-excel mr-2"></i>Convert to Excel';
+                            convertBtn.disabled = false;
+                        }, 2000);
+                    } catch (error) {
+                        showError('Error parsing M3U file: ' + error.message);
+                        convertBtn.innerHTML = '<i class="fas fa-file-excel mr-2"></i>Convert to Excel';
+                        convertBtn.disabled = false;
+                    }
+                };
+                reader.onerror = function() {
+                    showError('Error reading file');
+                    convertBtn.innerHTML = '<i class="fas fa-file-excel mr-2"></i>Convert to Excel';
+                    convertBtn.disabled = false;
+                };
+                reader.readAsText(file);
+            }
+
+            // Parse M3U file content
+            function parseM3U(content) {
+                const lines = content.split('\n');
+                const result = [];
+                let currentItem = null;
+                
+                for (const line of lines) {
+                    const trimmedLine = line.trim();
+                    
+                    if (trimmedLine.startsWith('#EXTINF:')) {
+                        // This is a channel info line
+                        if (currentItem) {
+                            result.push(currentItem);
+                        }
+                        
+                        currentItem = {
+                            name: '',
+                            url: '',
+                            group: '',
+                            tvgId: '',
+                            tvgName: '',
+                            tvgLogo: ''
+                        };
+                        
+                        // Parse EXTINF line
+                        const extinfData = trimmedLine.substring(8).split(',');
+                        if (extinfData.length >= 2) {
+                            currentItem.name = extinfData[1].trim();
+                            
+                            // Parse attributes
+                            const attributes = extinfData[0].match(/([a-zA-Z0-9-]+)="([^"]*)"/g) || [];
+                            for (const attr of attributes) {
+                                const [key, value] = attr.split('=');
+                                const cleanKey = key.replace(/"/g, '').toLowerCase();
+                                const cleanValue = value.replace(/"/g, '');
+                                
+                                if (cleanKey === 'group-title') {
+                                    currentItem.group = cleanValue;
+                                } else if (cleanKey === 'tvg-id') {
+                                    currentItem.tvgId = cleanValue;
+                                } else if (cleanKey === 'tvg-name') {
+                                    currentItem.tvgName = cleanValue;
+                                } else if (cleanKey === 'tvg-logo') {
+                                    currentItem.tvgLogo = cleanValue;
+                                }
+                            }
+                        }
+                    } else if (trimmedLine && !trimmedLine.startsWith('#') && currentItem) {
+                        // This is a URL line
+                        currentItem.url = trimmedLine;
+                    }
+                }
+                
+                // Add the last item if exists
+                if (currentItem && currentItem.url) {
+                    result.push(currentItem);
+                }
+                
+                return result;
+            }
+
+            // Render data in the table
+            function renderTable(data) {
+                tableBody.innerHTML = '';
+                
+                data.forEach((item, index) => {
+                    const row = document.createElement('tr');
+                    row.className = index % 2 === 0 ? 'bg-white' : 'bg-gray-50';
+                    
+                    row.innerHTML = `
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${index + 1}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
+                            ${item.name || 'N/A'}
+                            ${item.tvgLogo ? `<br><img src="${item.tvgLogo}" alt="Logo" class="h-8 mt-1">` : ''}
+                        </td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500 break-all max-w-xs">${item.url}</td>
+                        <td class="px-4 py-3 whitespace-nowrap text-sm text-gray-500">${item.group || 'N/A'}</td>
+                    `;
+                    
+                    tableBody.appendChild(row);
+                });
+            }
+
+            // Download Excel file
+            function downloadExcel() {
+                try {
+                    // Prepare worksheet
+                    const wsData = [
+                        ['#', 'Channel Name', 'URL', 'Group', 'TVG ID', 'TVG Name', 'Logo URL'],
+                        ...parsedData.map((item, index) => [
+                            index + 1,
+                            item.name,
+                            item.url,
+                            item.group,
+                            item.tvgId,
+                            item.tvgName,
+                            item.tvgLogo
+                        ])
+                    ];
+                    
+                    const ws = XLSX.utils.aoa_to_sheet(wsData);
+                    
+                    // Create workbook
+                    const wb = XLSX.utils.book_new();
+                    XLSX.utils.book_append_sheet(wb, ws, 'Channels');
+                    
+                    // Generate file and download
+                    const fileNameWithoutExt = file.name.replace(/\.[^/.]+$/, '');
+                    XLSX.writeFile(wb, `${fileNameWithoutExt}.xlsx`);
+                } catch (error) {
+                    showError('Error generating Excel file: ' + error.message);
+                }
+            }
+
+            // Helper functions
+            function formatFileSize(bytes) {
+                if (bytes === 0) return '0 Bytes';
+                const k = 1024;
+                const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+            }
+
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorAlert.classList.remove('hidden');
+                setTimeout(() => {
+                    errorAlert.classList.add('hidden');
+                }, 5000);
+            }
+        });
+    </script>
+</body>
+</html>
