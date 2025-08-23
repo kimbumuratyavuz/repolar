@@ -1,0 +1,1423 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+	<link rel="icon" href="https://cdn-icons-png.flaticon.com/128/733/733585.png" type="image/x-icon" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WhatsApp Sohbet Simülatörü</title>
+    <style>
+        /* Genel Stiller */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: all 0.3s ease;
+        }
+
+        /* Tema Değişkenleri */
+        :root {
+            --bg-primary: #f0f2f5;
+            --bg-secondary: #ffffff;
+            --bg-chat: #efeae2;
+            --text-primary: #111b21;
+            --text-secondary: #667781;
+            --text-meta: #8696a0;
+            --bubble-me: #d9fdd3;
+            --bubble-them: #ffffff;
+            --border-color: #e9edef;
+            --header-bg: #00a884;
+            --sidebar-bg: #ffffff;
+            --watermark-color: rgba(0, 0, 0, 0.1);
+        }
+
+        [data-theme="dark"] {
+            --bg-primary: #0b141a;
+            --bg-secondary: #202c33;
+            --bg-chat: #0b141a;
+            --text-primary: #e9edef;
+            --text-secondary: #8696a0;
+            --text-meta: #8696a0;
+            --bubble-me: #005c4b;
+            --bubble-them: #202c33;
+            --border-color: #2a3942;
+            --header-bg: #202c33;
+            --sidebar-bg: #111b21;
+            --watermark-color: rgba(255, 255, 255, 0.1);
+        }
+
+        /* Ana Layout */
+        .container {
+            display: flex;
+            height: 100vh;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* Sol Panel (Ayarlar) */
+        .sidebar {
+            width: 350px;
+            background-color: var(--sidebar-bg);
+            border-right: 1px solid var(--border-color);
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .sidebar h2 {
+            margin-bottom: 20px;
+            color: var(--text-primary);
+            font-size: 18px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .form-group textarea {
+            height: 120px;
+            resize: vertical;
+            font-family: monospace;
+        }
+
+        .form-group input[type="range"] {
+            padding: 0;
+        }
+
+        .range-value {
+            display: inline-block;
+            margin-left: 10px;
+            font-weight: bold;
+            color: var(--text-secondary);
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .btn-primary {
+            background-color: var(--header-bg);
+            color: white;
+        }
+
+        .btn-secondary {
+            background-color: var(--bg-secondary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+
+        .btn:hover {
+            opacity: 0.8;
+            transform: translateY(-1px);
+        }
+
+        /* Sağ Panel (Sohbet Önizlemesi) */
+        .chat-preview {
+            flex: 1;
+            background-color: var(--bg-primary);
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Mobil Çerçeve */
+        .mobile-frame {
+            max-width: 375px;
+            margin: 20px auto;
+            background-color: var(--bg-secondary);
+            border-radius: 25px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            height: calc(100vh - 40px);
+            position: relative;
+        }
+
+        /* Header */
+        .chat-header {
+            background-color: var(--header-bg);
+            color: white;
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-height: 60px;
+        }
+
+        .back-btn {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 4px;
+        }
+
+        .profile-pic {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background-color: #d9d9d9;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .contact-info {
+            flex: 1;
+        }
+
+        .contact-name {
+            font-weight: 500;
+            font-size: 16px;
+            margin-bottom: 2px;
+        }
+
+        .last-seen {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .header-icons {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        .header-icon {
+            font-size: 18px;
+            cursor: pointer;
+            opacity: 0.8;
+        }
+
+        /* Sohbet Alanı */
+        .chat-area {
+            flex: 1;
+            background-color: var(--bg-chat);
+            background-image: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60" viewBox="0 0 60 60"><g fill="none" fill-rule="evenodd"><g fill="%23000000" fill-opacity="0.05"><circle cx="30" cy="30" r="1"/></g></g></svg>');
+            padding: 12px;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        /* Tarih Etiketi */
+        .date-label {
+            text-align: center;
+            margin: 15px 0;
+        }
+
+        .date-label span {
+            background-color: var(--bg-secondary);
+            color: var(--text-meta);
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Mesaj Kabarcıkları */
+        .message {
+            margin-bottom: var(--message-spacing, 8px);
+            display: flex;
+            position: relative;
+        }
+
+        .message.me {
+            justify-content: flex-end;
+        }
+
+        .message.them {
+            justify-content: flex-start;
+        }
+
+        .message-bubble {
+            max-width: var(--bubble-width, 75%);
+            padding: 8px 12px;
+            border-radius: 8px;
+            position: relative;
+            word-wrap: break-word;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+            cursor: pointer;
+        }
+
+        .message.me .message-bubble {
+            background-color: var(--bubble-me);
+            border-bottom-right-radius: 2px;
+        }
+
+        .message.them .message-bubble {
+            background-color: var(--bubble-them);
+            border-bottom-left-radius: 2px;
+        }
+
+        .message-content {
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 4px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: var(--text-meta);
+            text-align: right;
+            margin-top: 4px;
+        }
+
+        .message.me .message-time {
+            color: rgba(0, 0, 0, 0.5);
+        }
+
+        /* Görsel Mesajları */
+        .message-image {
+            max-width: 200px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        /* Ses Mesajları */
+        .voice-message {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 150px;
+        }
+
+        .voice-play-btn {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: var(--text-meta);
+            border: none;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+        }
+
+        .voice-waveform {
+            flex: 1;
+            height: 20px;
+            background: linear-gradient(to right, var(--text-meta) 30%, transparent 30%);
+            border-radius: 10px;
+        }
+
+        .voice-duration {
+            font-size: 12px;
+            color: var(--text-meta);
+        }
+
+        /* Sağ Tık Menüsü */
+        .context-menu {
+            position: fixed;
+            background-color: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            z-index: 1000;
+            min-width: 120px;
+        }
+
+        .context-menu-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .context-menu-item:last-child {
+            border-bottom: none;
+        }
+
+        .context-menu-item:hover {
+            background-color: var(--bg-primary);
+        }
+
+        /* Filigran */
+        .watermark {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            font-size: 10px;
+            color: var(--watermark-color);
+            z-index: 10;
+            pointer-events: none;
+        }
+
+        /* Duyarlı Tasarım */
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: 40vh;
+            }
+            
+            .mobile-frame {
+                max-width: 100%;
+                margin: 0;
+                border-radius: 0;
+                height: 60vh;
+            }
+        }
+
+        /* Gizli Dosya Input */
+        .hidden {
+            display: none;
+        }
+        
+        /* Mesaj Formu Stili */
+        .message-form {
+            background-color: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 12px;
+        }
+        
+        .form-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+        
+        .form-row:last-child {
+            margin-bottom: 0;
+        }
+        
+        .form-row select,
+        .form-row input {
+            flex: 1;
+        }
+        
+        .form-row button {
+            flex: 0 0 auto;
+        }
+        
+        /* Mesaj Listesi */
+        .messages-list {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            margin-top: 8px;
+        }
+        
+        .message-item {
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .message-item:last-child {
+            border-bottom: none;
+        }
+        
+        .message-item:hover {
+            background-color: var(--bg-primary);
+        }
+        
+        .message-info {
+            flex: 1;
+            margin-right: 8px;
+        }
+        
+        .message-preview {
+            font-size: 13px;
+            color: var(--text-primary);
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .message-meta {
+            font-size: 11px;
+            color: var(--text-meta);
+        }
+        
+        .message-actions {
+            display: flex;
+            gap: 4px;
+        }
+        
+        .message-actions .btn {
+            padding: 4px 8px;
+            font-size: 12px;
+        }
+        .help-text {
+            font-size: 12px;
+            color: var(--text-meta);
+            margin-top: 4px;
+            line-height: 1.3;
+        }
+    </style>
+</head>
+<body data-theme="light">
+    <div class="container">
+        <!-- Sol Panel (Ayarlar) -->
+        <div class="sidebar">
+            <h2 id="sidebarTitle">Ayarlar</h2>
+            
+            <!-- Dil Seçimi -->
+            <div class="form-group">
+                <label for="language" id="langLabel">Dil / Language:</label>
+                <select id="language" onchange="changeLanguage()">
+                    <option value="tr">Türkçe</option>
+                    <option value="en">English</option>
+                </select>
+            </div>
+
+            <!-- Kişi Bilgileri -->
+            <div class="form-group">
+                <label for="contactName" id="nameLabel">Kişi Adı:</label>
+                <input type="text" id="contactName" value="Murat Yavuz" onchange="updateContact()">
+            </div>
+
+            <div class="form-group">
+                <label for="profileUrl" id="profileLabel">Profil Resmi:</label>
+                <div class="button-group">
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('profileFile').click()" id="uploadBtn">Dosya Seç</button>
+                    <button type="button" class="btn btn-secondary" onclick="toggleUrlInput()" id="urlBtn">URL Gir</button>
+                </div>
+                <input type="file" id="profileFile" class="hidden" accept="image/*" onchange="handleProfileImage(this)">
+                <input type="url" id="profileUrl" placeholder="https://..." onchange="updateContact()" style="display: none; margin-top: 8px;">
+                <div class="help-text" id="profileHelp">Bilgisayarınızdan bir resim seçin veya URL girin</div>
+            </div>
+
+            <!-- Tema Seçimi -->
+            <div class="form-group">
+                <label for="theme" id="themeLabel">Tema:</label>
+                <select id="theme" onchange="changeTheme()">
+                    <option value="light" id="lightTheme">Açık</option>
+                    <option value="dark" id="darkTheme">Koyu</option>
+                </select>
+            </div>
+
+            <!-- Saat Formatı -->
+            <div class="form-group">
+                <label for="timeFormat" id="timeLabel">Saat Formatı:</label>
+                <select id="timeFormat" onchange="updateChat()">
+                    <option value="24">24 Saat</option>
+                    <option value="12">12 Saat</option>
+                </select>
+            </div>
+
+            <!-- Balon Genişliği -->
+            <div class="form-group">
+                <label for="bubbleWidth" id="bubbleWidthLabel">Balon Genişliği:</label>
+                <input type="range" id="bubbleWidth" min="50" max="90" value="75" onchange="updateBubbleWidth()">
+                <span class="range-value" id="bubbleWidthValue">75%</span>
+            </div>
+
+            <!-- Mesaj Aralığı -->
+            <div class="form-group">
+                <label for="messageSpacing" id="messageSpacingLabel">Mesaj Aralığı:</label>
+                <input type="range" id="messageSpacing" min="4" max="20" value="8" onchange="updateMessageSpacing()">
+                <span class="range-value" id="messageSpacingValue">8px</span>
+            </div>
+
+            <!-- Mesaj Yönetimi -->
+            <div class="form-group">
+                <label id="messagesLabel">Mesajlar:</label>
+                
+                <!-- Yeni Mesaj Ekleme Formu -->
+                <div class="message-form">
+                    <div class="form-row">
+                        <select id="messageType">
+                            <option value="text">Metin</option>
+                            <option value="image">Resim</option>
+                            <option value="voice">Ses</option>
+                        </select>
+                        <select id="messageSender">
+                            <option value="me">Ben</option>
+                            <option value="them">O</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-row" id="messageContentRow">
+                        <input type="text" id="messageContent" placeholder="Mesaj içeriği...">
+                    </div>
+                    
+                    <div class="form-row">
+                        <input type="datetime-local" id="messageTime">
+                        <button type="button" class="btn btn-primary" onclick="addMessage()" id="addBtn">Ekle</button>
+                    </div>
+                </div>
+                
+                <!-- Mevcut Mesajlar Listesi -->
+                <div class="messages-list" id="messagesList">
+                    <!-- Mesajlar buraya dinamik olarak eklenecek -->
+                </div>
+            </div>
+
+            <!-- Butonlar -->
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="exportJson()" id="exportBtn">JSON İndir</button>
+                <button class="btn btn-secondary" onclick="importJson()" id="importBtn">JSON Yükle</button>
+                <button class="btn btn-primary" onclick="downloadPng()" id="downloadBtn">PNG İndir</button>
+            </div>
+
+            <input type="file" id="fileInput" class="hidden" accept=".json" onchange="loadJsonFile()">
+        </div>
+
+        <!-- Sağ Panel (Sohbet Önizlemesi) -->
+        <div class="chat-preview">
+            <div class="mobile-frame">
+                <!-- Header -->
+                <div class="chat-header">
+                    <button class="back-btn">←</button>
+                    <div class="profile-pic" id="headerProfilePic"></div>
+                    <div class="contact-info">
+                        <div class="contact-name" id="headerContactName">Ahmet Yılmaz</div>
+                        <div class="last-seen" id="lastSeen">son görülme bugün 14:25</div>
+                    </div>
+                    <div class="header-icons">
+                        <span class="header-icon">📞</span>
+                        <span class="header-icon">📹</span>
+                        <span class="header-icon">⋮</span>
+                    </div>
+                </div>
+
+                <!-- Sohbet Alanı -->
+                <div class="chat-area" id="chatArea">
+                    <!-- Mesajlar buraya dinamik olarak eklenecek -->
+                </div>
+
+                <!-- Filigran -->
+                <div class="watermark" id="watermark">
+                    Bu görsel kurgudur / For parody & testing only
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sağ Tık Menüsü -->
+    <div class="context-menu hidden" id="contextMenu">
+        <div class="context-menu-item" onclick="editMessage()" id="editOption">Düzenle</div>
+        <div class="context-menu-item" onclick="deleteMessage()" id="deleteOption">Sil</div>
+    </div>
+
+    <script>
+        // Çeviri Metinleri
+        const translations = {
+            tr: {
+                sidebarTitle: 'Ayarlar',
+                langLabel: 'Dil / Language:',
+                nameLabel: 'Kişi Adı:',
+                profileLabel: 'Profil Resmi:',
+                themeLabel: 'Tema:',
+                lightTheme: 'Açık',
+                darkTheme: 'Koyu',
+                timeLabel: 'Saat Formatı:',
+                bubbleWidthLabel: 'Balon Genişliği:',
+                messageSpacingLabel: 'Mesaj Aralığı:',
+                messagesLabel: 'Mesajlar:',
+                addBtn: 'Ekle',
+                exportBtn: 'JSON İndir',
+                importBtn: 'JSON Yükle',
+                downloadBtn: 'PNG İndir',
+                uploadBtn: 'Dosya Seç',
+                urlBtn: 'URL Gir',
+                profileHelp: 'Bilgisayarınızdan bir resim seçin veya URL girin',
+                lastSeen: 'son görülme bugün 14:25',
+                watermark: 'Bu görsel kurgudur / For parody & testing only',
+                editOption: 'Düzenle',
+                deleteOption: 'Sil',
+                today: 'Bugün',
+                yesterday: 'Dün'
+            },
+            en: {
+                sidebarTitle: 'Settings',
+                langLabel: 'Language / Dil:',
+                nameLabel: 'Contact Name:',
+                profileLabel: 'Profile Picture:',
+                themeLabel: 'Theme:',
+                lightTheme: 'Light',
+                darkTheme: 'Dark',
+                timeLabel: 'Time Format:',
+                bubbleWidthLabel: 'Bubble Width:',
+                messageSpacingLabel: 'Message Spacing:',
+                jsonLabel: 'Messages (JSON):',
+                jsonHelp: 'Supported types: "text", "image", "voice"<br>Sender: "me" (right) or "them" (left)<br>Time: ISO 8601 format (YYYY-MM-DDTHH:mm:ssZ)',
+                exportBtn: 'Download JSON',
+                importBtn: 'Upload JSON',
+                downloadBtn: 'Download PNG',
+                uploadBtn: 'Choose File',
+                urlBtn: 'Enter URL',
+                profileHelp: 'Select an image from your computer or enter a URL',
+                lastSeen: 'last seen today at 2:25 PM',
+                watermark: 'This is fake / For parody & testing only',
+                editOption: 'Edit',
+                deleteOption: 'Delete',
+                today: 'Today',
+                yesterday: 'Yesterday'
+            }
+        };
+
+        // Global Değişkenler
+        let currentMessages = [
+            {
+                "type": "text",
+                "content": "Merhaba! Nasılsın?",
+                "sender": "them",
+                "timestamp": "2024-01-15T10:30:00Z"
+            },
+            {
+                "type": "text", 
+                "content": "İyiyim teşekkürler, sen nasılsın?",
+                "sender": "me",
+                "timestamp": "2024-01-15T10:31:00Z"
+            },
+            {
+                "type": "image",
+                "content": "https://images.pexels.com/photos/2486168/pexels-photo-2486168.jpeg?auto=compress&cs=tinysrgb&dpr=1&w=500",
+                "sender": "them",
+                "timestamp": "2024-01-15T10:32:00Z"
+            },
+            {
+                "type": "voice",
+                "content": "0:15",
+                "sender": "me", 
+                "timestamp": "2024-01-15T10:33:00Z"
+            }
+        ];
+        let selectedMessageIndex = -1;
+        let currentLanguage = 'tr';
+
+        // Sayfa Yüklendiğinde
+        document.addEventListener('DOMContentLoaded', function() {
+            // Başlangıç mesajlarını yükle
+            updateMessagesList();
+            updateContact();
+            updateChat();
+            
+            // Şu anki zamanı datetime-local inputuna ayarla
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            document.getElementById('messageTime').value = now.toISOString().slice(0, 16);
+            
+            // Mesaj tipi değişimini dinle
+            document.getElementById('messageType').addEventListener('change', updateContentPlaceholder);
+            updateContentPlaceholder();
+            
+            // Sağ tık olaylarını dinle
+            document.addEventListener('contextmenu', handleRightClick);
+            document.addEventListener('click', hideContextMenu);
+        });
+
+        // Dil Değiştirme
+        function changeLanguage() {
+            currentLanguage = document.getElementById('language').value;
+            const t = translations[currentLanguage];
+            
+            // UI metinlerini güncelle
+            Object.keys(t).forEach(key => {
+                const element = document.getElementById(key);
+                if (element) {
+                    if (key === 'jsonHelp') {
+                        element.innerHTML = t[key];
+                    } else {
+                        element.textContent = t[key];
+                    }
+                }
+            });
+
+            // Sohbeti yeniden render et
+            updateChat();
+        }
+
+        // Tema Değiştirme
+        function changeTheme() {
+            const theme = document.getElementById('theme').value;
+            document.body.setAttribute('data-theme', theme);
+        }
+
+        // Kişi Bilgilerini Güncelleme
+        function updateContact() {
+            const name = document.getElementById('contactName').value;
+            const profileUrl = document.getElementById('profileUrl').value;
+            
+            document.getElementById('headerContactName').textContent = name;
+            
+            const profilePic = document.getElementById('headerProfilePic');
+            if (profileUrl) {
+                profilePic.style.backgroundImage = `url(${profileUrl})`;
+            } else {
+                profilePic.style.backgroundImage = '';
+            }
+        }
+
+        // Balon Genişliği Güncelleme
+        function updateBubbleWidth() {
+            const width = document.getElementById('bubbleWidth').value;
+            document.getElementById('bubbleWidthValue').textContent = width + '%';
+            document.documentElement.style.setProperty('--bubble-width', width + '%');
+        }
+
+        // Mesaj Aralığı Güncelleme
+        function updateMessageSpacing() {
+            const spacing = document.getElementById('messageSpacing').value;
+            document.getElementById('messageSpacingValue').textContent = spacing + 'px';
+            document.documentElement.style.setProperty('--message-spacing', spacing + 'px');
+        }
+
+        // Mesajları Güncelleme
+        function updateMessages() {
+            try {
+                const jsonText = document.getElementById('messagesJson').value;
+                currentMessages = JSON.parse(jsonText);
+                updateChat();
+            } catch (error) {
+                console.error('JSON hatası:', error);
+                alert('JSON formatı hatalı!');
+            }
+        }
+
+        // Sohbeti Render Etme
+        function updateChat() {
+            const chatArea = document.getElementById('chatArea');
+            chatArea.innerHTML = '';
+
+            let lastDate = null;
+
+            currentMessages.forEach((message, index) => {
+                const messageDate = new Date(message.timestamp);
+                const messageDateString = messageDate.toDateString();
+
+                // Tarih etiketi kontrolü
+                if (lastDate !== messageDateString) {
+                    const dateLabel = createDateLabel(messageDate);
+                    chatArea.appendChild(dateLabel);
+                    lastDate = messageDateString;
+                }
+
+                // Mesaj baloncuğu oluştur
+                const messageElement = createMessageBubble(message, index);
+                chatArea.appendChild(messageElement);
+            });
+
+            // En alta kaydır
+            chatArea.scrollTop = chatArea.scrollHeight;
+        }
+
+        // Tarih Etiketi Oluşturma
+        function createDateLabel(date) {
+            const div = document.createElement('div');
+            div.className = 'date-label';
+            
+            const span = document.createElement('span');
+            const today = new Date();
+            const yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+
+            const t = translations[currentLanguage];
+            let dateText;
+            
+            if (date.toDateString() === today.toDateString()) {
+                dateText = t.today;
+            } else if (date.toDateString() === yesterday.toDateString()) {
+                dateText = t.yesterday;
+            } else {
+                dateText = date.toLocaleDateString('tr-TR');
+            }
+            
+            span.textContent = dateText;
+            div.appendChild(span);
+            
+            return div;
+        }
+
+        // Mesaj Baloncuğu Oluşturma
+        function createMessageBubble(message, index) {
+            const div = document.createElement('div');
+            div.className = `message ${message.sender}`;
+            div.setAttribute('data-index', index);
+
+            const bubble = document.createElement('div');
+            bubble.className = 'message-bubble';
+
+            // İçerik tipine göre render et
+            const content = document.createElement('div');
+            content.className = 'message-content';
+
+            switch (message.type) {
+                case 'text':
+                    content.textContent = message.content;
+                    break;
+                case 'image':
+                    const img = document.createElement('img');
+                    img.src = message.content;
+                    img.className = 'message-image';
+                    img.alt = 'Görsel';
+                    content.appendChild(img);
+                    break;
+                case 'voice':
+                    const voiceDiv = document.createElement('div');
+                    voiceDiv.className = 'voice-message';
+                    voiceDiv.innerHTML = `
+                        <button class="voice-play-btn">▶</button>
+                        <div class="voice-waveform"></div>
+                        <span class="voice-duration">${message.content}</span>
+                    `;
+                    content.appendChild(voiceDiv);
+                    break;
+            }
+
+            // Zaman bilgisi
+            const time = document.createElement('div');
+            time.className = 'message-time';
+            time.textContent = formatTime(new Date(message.timestamp));
+
+            bubble.appendChild(content);
+            bubble.appendChild(time);
+            div.appendChild(bubble);
+
+            return div;
+        }
+
+        // Zaman Formatlama
+        function formatTime(date) {
+            const timeFormat = document.getElementById('timeFormat').value;
+            
+            if (timeFormat === '12') {
+                return date.toLocaleTimeString('en-US', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: true
+                });
+            } else {
+                return date.toLocaleTimeString('tr-TR', {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                });
+            }
+        }
+
+        // Sağ Tık İşleyicisi
+        function handleRightClick(e) {
+            const messageElement = e.target.closest('.message');
+            if (messageElement) {
+                e.preventDefault();
+                selectedMessageIndex = parseInt(messageElement.getAttribute('data-index'));
+                
+                const contextMenu = document.getElementById('contextMenu');
+                contextMenu.style.left = e.pageX + 'px';
+                contextMenu.style.top = e.pageY + 'px';
+                contextMenu.classList.remove('hidden');
+            }
+        }
+
+        // Bağlam Menüsünü Gizleme
+        function hideContextMenu() {
+            document.getElementById('contextMenu').classList.add('hidden');
+        }
+
+        // Mesaj Düzenleme
+        function editMessage() {
+            if (selectedMessageIndex >= 0) {
+                const message = currentMessages[selectedMessageIndex];
+                const newContent = prompt('Mesajı düzenle:', message.content);
+                
+                if (newContent !== null) {
+                    currentMessages[selectedMessageIndex].content = newContent;
+                    document.getElementById('messagesJson').value = JSON.stringify(currentMessages, null, 2);
+                    updateChat();
+                }
+            }
+            hideContextMenu();
+        }
+
+        // Mesaj Silme
+        function deleteMessage() {
+            if (selectedMessageIndex >= 0) {
+                if (confirm('Bu mesajı silmek istediğinize emin misiniz?')) {
+                    currentMessages.splice(selectedMessageIndex, 1);
+                    document.getElementById('messagesJson').value = JSON.stringify(currentMessages, null, 2);
+                    updateChat();
+                }
+            }
+            hideContextMenu();
+        }
+
+        // JSON Dışa Aktarma
+        function exportJson() {
+            const data = {
+                meta: {
+                    generated: true,
+                    disclaimer: "kurgu",
+                    exportDate: new Date().toISOString(),
+                    contact: {
+                        name: document.getElementById('contactName').value,
+                        profileUrl: document.getElementById('profileUrl').value
+                    },
+                    settings: {
+                        theme: document.getElementById('theme').value,
+                        timeFormat: document.getElementById('timeFormat').value,
+                        bubbleWidth: document.getElementById('bubbleWidth').value,
+                        messageSpacing: document.getElementById('messageSpacing').value
+                    }
+                },
+                messages: currentMessages
+            };
+
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'whatsapp-chat-export.json';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // JSON İçe Aktarma
+        function importJson() {
+            document.getElementById('fileInput').click();
+        }
+
+        // JSON Dosyası Yükleme
+        function loadJsonFile() {
+            const file = document.getElementById('fileInput').files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const data = JSON.parse(e.target.result);
+                        
+                        // Mesajları yükle
+                        if (data.messages) {
+                            currentMessages = data.messages;
+                            document.getElementById('messagesJson').value = JSON.stringify(data.messages, null, 2);
+                        }
+                        
+                        // Ayarları yükle
+                        if (data.meta && data.meta.contact) {
+                            if (data.meta.contact.name) {
+                                document.getElementById('contactName').value = data.meta.contact.name;
+                            }
+                            if (data.meta.contact.profileUrl) {
+                                document.getElementById('profileUrl').value = data.meta.contact.profileUrl;
+                            }
+                            updateContact();
+                        }
+                        
+                        if (data.meta && data.meta.settings) {
+                            const settings = data.meta.settings;
+                            if (settings.theme) {
+                                document.getElementById('theme').value = settings.theme;
+                                changeTheme();
+                            }
+                            if (settings.timeFormat) {
+                                document.getElementById('timeFormat').value = settings.timeFormat;
+                            }
+                            if (settings.bubbleWidth) {
+                                document.getElementById('bubbleWidth').value = settings.bubbleWidth;
+                                updateBubbleWidth();
+                            }
+                            if (settings.messageSpacing) {
+                                document.getElementById('messageSpacing').value = settings.messageSpacing;
+                                updateMessageSpacing();
+                            }
+                        }
+                        
+                        updateChat();
+                        alert('JSON başarıyla yüklendi!');
+                        
+                    } catch (error) {
+                        alert('JSON dosyası okunamadı: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        // PNG İndirme (Geliştirilmiş)
+        async function downloadPng() {
+            try {
+                const chatFrame = document.querySelector('.mobile-frame');
+                
+                // Modern tarayıcılarda html2canvas API'si olmadan ekran yakalama
+                if (navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia) {
+                    const stream = await navigator.mediaDevices.getDisplayMedia({
+                        video: { mediaSource: 'screen' }
+                    });
+                    
+                    const video = document.createElement('video');
+                    video.srcObject = stream;
+                    video.play();
+                    
+                    video.addEventListener('loadedmetadata', () => {
+                        const canvas = document.createElement('canvas');
+                        const ctx = canvas.getContext('2d');
+                        
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        
+                        ctx.drawImage(video, 0, 0);
+                        
+                        // Stream'i durdur
+                        stream.getTracks().forEach(track => track.stop());
+                        
+                        // Canvas'ı blob'a çevir ve indir
+                        canvas.toBlob(function(blob) {
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'whatsapp-chat-screenshot.png';
+                            a.click();
+                            URL.revokeObjectURL(url);
+                        });
+                    });
+                } else {
+                    // Fallback: DOM-to-Image benzeri yaklaşım
+                    await domToCanvas(chatFrame);
+                }
+                
+            } catch (error) {
+                console.error('PNG export hatası:', error);
+                alert(currentLanguage === 'tr' ? 
+                    'PNG indirme başarısız! Ekran paylaşımı izni verin.' : 
+                    'PNG download failed! Please grant screen sharing permission.');
+            }
+        }
+
+        // DOM elemanını canvas'a çevirme (Fallback)
+        async function domToCanvas(element) {
+            const rect = element.getBoundingClientRect();
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            // Yüksek çözünürlük için scale
+            const scale = window.devicePixelRatio || 1;
+            canvas.width = rect.width * scale;
+            canvas.height = rect.height * scale;
+            ctx.scale(scale, scale);
+            
+            // Arka plan
+            const computedStyle = getComputedStyle(element);
+            ctx.fillStyle = computedStyle.backgroundColor || '#ffffff';
+            ctx.fillRect(0, 0, rect.width, rect.height);
+            
+            // Basit işlemler için SVG ile element'i çiz
+            const svgData = `
+                <svg xmlns="http://www.w3.org/2000/svg" width="${rect.width}" height="${rect.height}">
+                    <foreignObject width="100%" height="100%">
+                        <div xmlns="http://www.w3.org/1999/xhtml" style="font: 14px Arial;">
+                            ${element.innerHTML}
+                        </div>
+                    </foreignObject>
+                </svg>
+            `;
+            
+            const img = new Image();
+            const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(svgBlob);
+            
+            img.onload = function() {
+                ctx.drawImage(img, 0, 0);
+                URL.revokeObjectURL(url);
+                
+                // İndir
+                canvas.toBlob(function(blob) {
+                    const downloadUrl = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = downloadUrl;
+                    a.download = 'whatsapp-chat-screenshot.png';
+                    a.click();
+                    URL.revokeObjectURL(downloadUrl);
+                });
+            };
+            
+            img.src = url;
+        }
+
+        // Profil Resmi Dosya Yükleme
+        function handleProfileImage(input) {
+            const file = input.files[0];
+            if (file && file.type.startsWith('image/')) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Base64 formatında resmi ayarla
+                    document.getElementById('profileUrl').value = e.target.result;
+                    updateContact();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // URL Giriş Modunu Değiştir
+        function toggleUrlInput() {
+            const urlInput = document.getElementById('profileUrl');
+            const isHidden = urlInput.style.display === 'none';
+            
+            if (isHidden) {
+                urlInput.style.display = 'block';
+                urlInput.focus();
+                document.getElementById('urlBtn').textContent = 'Gizle';
+            } else {
+                urlInput.style.display = 'none';
+                document.getElementById('urlBtn').textContent = currentLanguage === 'tr' ? 'URL Gir' : 'Enter URL';
+            }
+        }
+
+        // Mesaj İçerik Placeholder Güncelleme
+        function updateContentPlaceholder() {
+            const type = document.getElementById('messageType').value;
+            const input = document.getElementById('messageContent');
+            
+            switch(type) {
+                case 'text':
+                    input.placeholder = 'Mesaj içeriği...';
+                    input.type = 'text';
+                    break;
+                case 'image':
+                    input.placeholder = 'Resim URL\'si...';
+                    input.type = 'url';
+                    break;
+                case 'voice':
+                    input.placeholder = 'Ses süresi (örn: 0:15)';
+                    input.type = 'text';
+                    break;
+            }
+        }
+
+        // Yeni Mesaj Ekleme
+        function addMessage() {
+            const type = document.getElementById('messageType').value;
+            const content = document.getElementById('messageContent').value;
+            const sender = document.getElementById('messageSender').value;
+            const timeInput = document.getElementById('messageTime').value;
+            
+            if (!content.trim()) {
+                alert(currentLanguage === 'tr' ? 'Mesaj içeriği boş olamaz!' : 'Message content cannot be empty!');
+                return;
+            }
+            
+            if (!timeInput) {
+                alert(currentLanguage === 'tr' ? 'Zaman seçiniz!' : 'Please select time!');
+                return;
+            }
+            
+            // Zamanı ISO formatına çevir
+            const timestamp = new Date(timeInput).toISOString();
+            
+            const newMessage = {
+                type: type,
+                content: content,
+                sender: sender,
+                timestamp: timestamp
+            };
+            
+            // Mesajı ekle ve zamana göre sırala
+            currentMessages.push(newMessage);
+            currentMessages.sort((a, b) => new Date(a.timestamp) - new Date(b.timestamp));
+            
+            // Formu temizle
+            document.getElementById('messageContent').value = '';
+            
+            // Bir sonraki mesaj için zaman güncelle
+            const nextTime = new Date(timeInput);
+            nextTime.setMinutes(nextTime.getMinutes() + 1);
+            document.getElementById('messageTime').value = nextTime.toISOString().slice(0, 16);
+            
+            // Güncellemeleri yap
+            updateMessagesList();
+            updateChat();
+        }
+
+        // Mesaj Listesini Güncelleme
+        function updateMessagesList() {
+            const listContainer = document.getElementById('messagesList');
+            listContainer.innerHTML = '';
+            
+            if (currentMessages.length === 0) {
+                const emptyMessage = document.createElement('div');
+                emptyMessage.style.padding = '20px';
+                emptyMessage.style.textAlign = 'center';
+                emptyMessage.style.color = 'var(--text-meta)';
+                emptyMessage.textContent = currentLanguage === 'tr' ? 'Henüz mesaj yok' : 'No messages yet';
+                listContainer.appendChild(emptyMessage);
+                return;
+            }
+            
+            currentMessages.forEach((message, index) => {
+                const messageItem = document.createElement('div');
+                messageItem.className = 'message-item';
+                
+                const messageInfo = document.createElement('div');
+                messageInfo.className = 'message-info';
+                
+                const preview = document.createElement('div');
+                preview.className = 'message-preview';
+                
+                // İçerik önizlemesi
+                let previewText = '';
+                switch(message.type) {
+                    case 'text':
+                        previewText = message.content;
+                        break;
+                    case 'image':
+                        previewText = `📷 ${currentLanguage === 'tr' ? 'Resim' : 'Image'}`;
+                        break;
+                    case 'voice':
+                        previewText = `🎵 ${currentLanguage === 'tr' ? 'Ses' : 'Voice'} (${message.content})`;
+                        break;
+                }
+                preview.textContent = previewText;
+                
+                const meta = document.createElement('div');
+                meta.className = 'message-meta';
+                const date = new Date(message.timestamp);
+                const senderText = message.sender === 'me' ? 
+                    (currentLanguage === 'tr' ? 'Ben' : 'Me') : 
+                    (currentLanguage === 'tr' ? 'O' : 'Them');
+                meta.textContent = `${senderText} • ${formatTime(date)} • ${message.type}`;
+                
+                messageInfo.appendChild(preview);
+                messageInfo.appendChild(meta);
+                
+                const actions = document.createElement('div');
+                actions.className = 'message-actions';
+                
+                const editBtn = document.createElement('button');
+                editBtn.className = 'btn btn-secondary';
+                editBtn.textContent = currentLanguage === 'tr' ? 'Düzenle' : 'Edit';
+                editBtn.onclick = () => editMessageFromList(index);
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-secondary';
+                deleteBtn.textContent = currentLanguage === 'tr' ? 'Sil' : 'Delete';
+                deleteBtn.style.color = 'red';
+                deleteBtn.onclick = () => deleteMessageFromList(index);
+                
+                actions.appendChild(editBtn);
+                actions.appendChild(deleteBtn);
+                
+                messageItem.appendChild(messageInfo);
+                messageItem.appendChild(actions);
+                
+                listContainer.appendChild(messageItem);
+            });
+        }
+
+        // Listeden Mesaj Düzenleme
+        function editMessageFromList(index) {
+            const message = currentMessages[index];
+            const newContent = prompt(
+                currentLanguage === 'tr' ? 'Mesajı düzenle:' : 'Edit message:', 
+                message.content
+            );
+            
+            if (newContent !== null && newContent.trim()) {
+                currentMessages[index].content = newContent.trim();
+                updateMessagesList();
+                updateChat();
+            }
+        }
+
+        // Listeden Mesaj Silme
+        function deleteMessageFromList(index) {
+            const confirmMsg = currentLanguage === 'tr' ? 
+                'Bu mesajı silmek istediğinize emin misiniz?' : 
+                'Are you sure you want to delete this message?';
+                
+            if (confirm(confirmMsg)) {
+                currentMessages.splice(index, 1);
+                updateMessagesList();
+                updateChat();
+            }
+        }
+    </script>
+</body>
+</html>
+
+<!--
+NASIL KULLANILIR:
+
+1. Sol panelden kişi adı ve profil resmi URL'sini girin.
+2. Tema (açık/koyu) ve saat formatını (12/24 saat) seçin.
+3. Balon genişliği ve mesaj aralığını ayarlayın.
+4. JSON alanına mesajlarınızı girin. Format:
+   [
+     {
+       "type": "text|image|voice",
+       "content": "mesaj içeriği veya URL",
+       "sender": "me|them", 
+       "timestamp": "2024-01-15T10:30:00Z"
+     }
+   ]
+5. Mesaj türleri:
+   - "text": Normal metin mesajı
+   - "image": Görsel mesajı (content'e URL koyun)
+   - "voice": Ses mesajı (content'e süre koyun, örn: "0:15")
+6. Sağ panelde mobil görünümde sohbet önizlemesini görün.
+7. Mesajlara sağ tıklayarak düzenle/sil menüsünü açın.
+8. "JSON İndir" ile ayarları ve mesajları kaydedin.
+9. "JSON Yükle" ile önceden kaydedilen dosyaları geri yükleyin.
+10. "PNG İndir" ile sohbet ekran görüntüsünü indirin.
+
+NOT: PNG indirme özelliği için html2canvas kütüphanesi gerekmektedir. 
+Şu anda basit bir placeholder gösterilmektedir.
+
+Tüm çıktılar "Bu görsel kurgudur" filigranı içerir.
+JSON çıktısında meta bilgiler ve kurgu uyarısı bulunur.
+
+DESTEKLENİN DİLLER:
+- Türkçe (TR)
+- İngilizce (EN)
+
+TEMA DESTEĞİ:
+- Açık tema (Light)
+- Koyu tema (Dark)
+
+MESAJ ÖZELLİKLERİ:
+- Otomatik tarih etiketleri (5+ dakika ara ile)
+- 12/24 saat formatı desteği
+- Yerel saat dönüşümü
+- Mesaj düzenleme/silme
+- Görsel ve ses mesaj desteği
+- Çeşitli balon genişliği ve aralık ayarları
+
+Bu tek HTML dosyası herhangi bir web tarayıcısında çalışır.
+Harici bağımlılık gerektirmez.
+-->
